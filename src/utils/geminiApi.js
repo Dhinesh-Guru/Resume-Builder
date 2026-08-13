@@ -256,46 +256,35 @@ async function discoverModelEndpoint(apiKey) {
 }
 
 /**
- * Bulletproof JSON object extractor that handles outer text, markdown fences,
- * and string escapes cleanly.
+ * Robust JSON extractor that handles markdown fences, unescaped characters,
+ * control sequences, and trailing commas.
  */
 function extractFirstJsonObject(str) {
   if (!str) return null;
   
   let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
-  const firstBrace = clean.indexOf('{');
-  if (firstBrace === -1) return null;
 
-  let braceCount = 0;
-  let inString = false;
-  let isEscaped = false;
-
-  for (let i = firstBrace; i < clean.length; i++) {
-    const char = clean[i];
-
-    if (inString) {
-      if (char === '\\' && !isEscaped) {
-        isEscaped = true;
-      } else {
-        if (char === '"' && !isEscaped) {
-          inString = false;
-        }
-        isEscaped = false;
-      }
-    } else {
-      if (char === '"') {
-        inString = true;
-      } else if (char === '{') {
-        braceCount++;
-      } else if (char === '}') {
-        braceCount--;
-        if (braceCount === 0) {
-          const jsonSub = clean.substring(firstBrace, i + 1);
+  // Try direct parse first
+  try {
+    return JSON.parse(clean);
+  } catch (e) {
+    // Sanitize unescaped control characters in strings
+    const sanitized = clean.replace(/[\u0000-\u001F]+/g, ' ');
+    try {
+      return JSON.parse(sanitized);
+    } catch (e2) {
+      // Isolate JSON object via regex
+      const jsonMatch = sanitized.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const rawObj = jsonMatch[0];
+        try {
+          return JSON.parse(rawObj);
+        } catch (e3) {
           try {
-            return JSON.parse(jsonSub);
-          } catch (e) {
-            const fixedJson = jsonSub.replace(/,\s*([\}\]])/g, '$1');
-            return JSON.parse(fixedJson);
+            // Remove trailing commas before closing braces/brackets
+            return JSON.parse(rawObj.replace(/,\s*([\}\]])/g, '$1'));
+          } catch (e4) {
+            console.warn('All JSON parsing attempts failed:', e4);
           }
         }
       }
@@ -306,7 +295,7 @@ function extractFirstJsonObject(str) {
 }
 
 /**
- * Fast REST API call to Google Gemini AI with fallback merging and independent Best Role detection.
+ * Fast REST API call to Google Gemini AI using JSON mode (response_mime_type).
  */
 export async function analyzeResumeWithGemini(resumeText, jobTitle) {
   const apiKey = getStoredApiKey() ? getStoredApiKey().trim() : '';
@@ -338,7 +327,7 @@ Evaluate:
 2. Job Relevance & Keyword Alignment for ${jobTitle} (0-100)
 3. Formatting Score (0-100)
 
-Return ONLY a raw JSON object (no markdown, no code blocks) with this exact key structure:
+Return ONLY a raw JSON object (no markdown, no conversational text) with this exact key structure:
 {
   "overallScore": 75,
   "jobMatchScore": 68,
@@ -359,7 +348,7 @@ Return ONLY a raw JSON object (no markdown, no code blocks) with this exact key 
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 1024
+            responseMimeType: "application/json"
           }
         })
       });
