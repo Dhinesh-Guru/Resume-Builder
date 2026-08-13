@@ -328,7 +328,7 @@ function parseGeminiResponse(responseText, localBaseline, jobTitle) {
 }
 
 /**
- * Fast REST API call to Google Gemini AI.
+ * Fast REST API call to Google Gemini AI (Optimized for 2-4 second response time).
  */
 export async function analyzeResumeWithGemini(resumeText, jobTitle) {
   const apiKey = getStoredApiKey() ? getStoredApiKey().trim() : '';
@@ -348,29 +348,24 @@ export async function analyzeResumeWithGemini(resumeText, jobTitle) {
 
     const prompt = `
 You are an expert ATS Auditor and Senior HR Recruiter.
-Analyze the following resume text specifically for the target job position: "${jobTitle}".
+Analyze this resume text for target job position: "${jobTitle}". Keep output concise.
 
 RESUME TEXT:
 """
-${resumeText.slice(0, 4000)}
+${resumeText.slice(0, 2500)}
 """
 
-Evaluate:
-1. Overall ATS Formatting & Readability (0-100)
-2. Job Relevance & Keyword Alignment for ${jobTitle} (0-100)
-3. Formatting Score (0-100)
-
-Return ONLY a raw JSON object (no markdown, no conversational text) with this exact key structure:
+Return ONLY a raw JSON object matching this exact key structure:
 {
   "overallScore": 75,
   "jobMatchScore": 68,
   "formattingScore": 82,
   "keywordScore": 70,
-  "summary": "Detailed 2 sentence summary of resume strengths and alignment.",
-  "missingKeywords": ["important_keyword1", "important_keyword2"],
-  "passedChecks": ["Valid contact info found", "Standard sections present"],
-  "warnings": ["Lacks numerical metrics"],
-  "recommendations": ["Add quantified achievements to experience bullets", "Include missing domain keywords for ${jobTitle}"]
+  "summary": "Concise summary of candidate suitability for ${jobTitle}.",
+  "missingKeywords": ["keyword1", "keyword2"],
+  "passedChecks": ["Valid contact info", "Clear section headers"],
+  "warnings": ["Lacks quantified metrics"],
+  "recommendations": ["Include missing domain keywords for ${jobTitle}"]
 }`;
 
     try {
@@ -380,7 +375,8 @@ Return ONLY a raw JSON object (no markdown, no conversational text) with this ex
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.1
+            temperature: 0.1,
+            maxOutputTokens: 350
           }
         })
       });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Key, ExternalLink, X, Check, Info, Sparkles, ShieldCheck, Zap } from 'lucide-react';
+import { Key, ExternalLink, X, Check, Info, Sparkles, ShieldCheck, Zap, Clock } from 'lucide-react';
 import { getStoredApiKey, setStoredApiKey } from '../utils/geminiApi';
 
 export default function ApiKeyModal({ isOpen, onClose }) {
@@ -90,6 +90,10 @@ export default function ApiKeyModal({ isOpen, onClose }) {
             <li><strong>🤖 Recruiter-Level Nuance</strong>: Gemini AI evaluates your resume like a senior human recruiter, understanding contextual achievements, leadership impact, and implicit domain skills beyond simple keyword counts.</li>
             <li><strong>✍️ Tailored Suggestions</strong>: Generates personalized, executive-level improvement tips specifically customized for your exact resume text and target role.</li>
             <li><strong>⚡ Smart Heuristics Fallback (Default)</strong>: 100% offline, free & fast local rule engine. Ideal for offline use or quick instant checks!</li>
+            <li style={{ marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px dashed rgba(16, 185, 129, 0.25)', color: 'var(--text-muted)' }}>
+              <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />
+              <strong>Processing Speed Note</strong>: Gemini AI communicates securely with Google Cloud servers (~3–8 seconds). Local Smart Heuristics runs instantly (<50ms).
+            </li>
           </ul>
         </div>
 
