@@ -13,6 +13,9 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme);
+    document.documentElement.style.colorScheme = theme;
+    document.body.style.colorScheme = theme;
     localStorage.setItem('app_theme', theme);
   }, [theme]);
 
@@ -25,7 +28,7 @@ export default function App() {
   };
 
   return (
-    <div>
+    <div style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
       {/* Background Orbs */}
       <div className="bg-decorations">
         <div className="orb orb-1"></div>
@@ -42,7 +45,7 @@ export default function App() {
       />
 
       {/* Page Routing */}
-      <main style={{ minHeight: 'calc(100vh - 80px)', paddingTop: '1rem' }}>
+      <main style={{ minHeight: 'calc(100vh - 80px)', paddingTop: '1rem', width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
         {activeTab === 'builder' && (
           <ResumeBuilder onResumeCreated={handleResumeCreated} />
         )}
@@ -67,7 +70,7 @@ export default function App() {
       }}>
         <div className="container">
           <p>© 2026 ATS ResumePro. Built with Vite + React. Standard ATS Single-Column Layout & AI Optimization.</p>
-          <p style={{ marginTop: '0.4rem', fontWeight: '500', color: 'var(--text-color)' }}>Made by Dhinesh Guru</p>
+          <p style={{ marginTop: '0.4rem', fontWeight: '500', color: 'var(--text-main)' }}>Made by Dhinesh Guru</p>
         </div>
       </footer>
 

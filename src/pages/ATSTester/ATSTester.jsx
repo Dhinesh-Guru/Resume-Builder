@@ -72,9 +72,9 @@ export default function ATSTester() {
   };
 
   return (
-    <div className="container animate-fade-in" style={{ paddingBottom: '4rem' }}>
+    <div className="container animate-fade-in" style={{ paddingBottom: '4rem', width: '100%', maxWidth: '100vw', boxSizing: 'border-box' }}>
       {/* Header */}
-      <div style={{ textAlign: 'center', margin: '2rem 0' }}>
+      <div style={{ textAlign: 'center', margin: '1.5rem 0' }}>
         <h1 style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }}>
           ATS Resume <span className="gradient-text">Checker & Tester</span>
         </h1>
@@ -83,9 +83,9 @@ export default function ATSTester() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: report ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
-        {/* Left Input Panel: Upload + Job Selector */}
-        <div className="glass-card">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+        {/* Top Input Panel: Upload + Job Selector */}
+        <div className="glass-card" style={{ width: '100%', boxSizing: 'border-box' }}>
           <h2 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Upload size={20} color="var(--accent-primary)" /> Upload Resume & Select Role
           </h2>
@@ -142,7 +142,7 @@ export default function ATSTester() {
               marginBottom: '1.5rem',
               position: 'relative'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
                 <div style={{
                   width: '42px',
                   height: '42px',
@@ -154,49 +154,61 @@ export default function ATSTester() {
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  <FileCheck size={22} />
+                  <FileText size={22} />
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <h4 style={{ fontSize: '0.95rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ flex: 1, minWidth: '180px' }}>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, wordBreak: 'break-word' }}>
                     {uploadedFile.name}
                   </h4>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
                     {(uploadedFile.size / 1024).toFixed(1)} KB • {extractedText.length} characters parsed
                   </p>
                 </div>
-                <button
+                <button 
                   onClick={removeFile}
                   className="btn btn-danger btn-sm"
-                  title="Delete file and re-upload"
+                  style={{ gap: '0.35rem' }}
                 >
-                  <Trash2 size={16} /> Delete
+                  <Trash2 size={15} /> Delete
                 </button>
               </div>
 
-              {/* Text Preview Toggle */}
-              <div style={{ marginTop: '0.85rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button 
-                  onClick={() => setShowTextPreview(!showTextPreview)}
-                  style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                >
-                  <Eye size={14} /> {showTextPreview ? 'Hide Extracted Text' : 'Preview Extracted Text'}
-                </button>
-              </div>
-
-              {showTextPreview && (
-                <div style={{
-                  marginTop: '0.75rem',
-                  maxHeight: '160px',
-                  overflowY: 'auto',
-                  background: 'var(--bg-base)',
-                  padding: '0.75rem',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.78rem',
-                  fontFamily: 'monospace',
-                  whiteSpace: 'pre-wrap',
-                  color: 'var(--text-muted)'
-                }}>
-                  {extractedText}
+              {/* Text Preview Accordion */}
+              {extractedText && (
+                <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px border var(--border-color)' }}>
+                  <button
+                    onClick={() => setShowTextPreview(!showTextPreview)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent-primary)',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: 0
+                    }}
+                  >
+                    <Eye size={14} /> {showTextPreview ? 'Hide Parsed Text' : 'Preview Extracted Text'}
+                  </button>
+                  {showTextPreview && (
+                    <div style={{
+                      marginTop: '0.5rem',
+                      padding: '0.75rem',
+                      background: 'var(--bg-base)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.78rem',
+                      maxHeight: '160px',
+                      overflowY: 'auto',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      color: 'var(--text-muted)'
+                    }}>
+                      {extractedText}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -243,12 +255,12 @@ export default function ATSTester() {
           </button>
         </div>
 
-        {/* Right Output Panel: ATS Report & Breakdown */}
+        {/* Output Panel: ATS Report & Breakdown */}
         {report && (
-          <div className="glass-card animate-fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
               <div>
-                <h2 style={{ fontSize: '1.4rem' }}>ATS Compatibility Report</h2>
+                <h2 style={{ fontSize: '1.35rem' }}>ATS Compatibility Report</h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                   Tested Position: <strong style={{ color: 'var(--accent-primary)' }}>{jobTitle}</strong>
                 </p>
@@ -283,15 +295,16 @@ export default function ATSTester() {
                 background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(99, 102, 241, 0.12))',
                 border: '1.5px solid var(--accent-success)',
                 borderRadius: 'var(--radius-md)',
-                padding: '1.25rem',
+                padding: '1rem',
                 marginBottom: '1.5rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '1rem'
+                gap: '0.75rem',
+                flexWrap: 'wrap'
               }}>
                 <div style={{
-                  width: '44px',
-                  height: '44px',
+                  width: '38px',
+                  height: '38px',
                   borderRadius: '50%',
                   background: 'var(--accent-success)',
                   color: '#ffffff',
@@ -300,13 +313,13 @@ export default function ATSTester() {
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  <Target size={22} />
+                  <Target size={20} />
                 </div>
-                <div>
-                  <h3 style={{ fontSize: '1rem', color: 'var(--accent-success)', marginBottom: '0.2rem' }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <h3 style={{ fontSize: '0.95rem', color: 'var(--accent-success)', marginBottom: '0.2rem' }}>
                     🎯 Role Match Recommendation
                   </h3>
-                  <p style={{ fontSize: '0.92rem', color: 'var(--text-main)', margin: 0, fontWeight: 600 }}>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-main)', margin: 0, fontWeight: 600, lineHeight: 1.4 }}>
                     Your uploaded resume is <span style={{ color: 'var(--accent-success)', textDecoration: 'underline' }}>{report.bestMatchingRole.matchScore}% matched</span> for the <span style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>"{report.bestMatchingRole.title}"</span> position based on your extracted skills and experience!
                   </p>
                 </div>
@@ -316,62 +329,60 @@ export default function ATSTester() {
             {/* Score Gauges */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-              gap: '1rem',
-              marginBottom: '2rem'
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: '0.5rem',
+              marginBottom: '1.75rem',
+              width: '100%',
+              boxSizing: 'border-box'
             }}>
-              <div style={{ background: 'var(--bg-surface)', padding: '1.25rem', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '2.4rem', fontWeight: 800, color: report.overallScore >= 75 ? 'var(--accent-success)' : report.overallScore >= 50 ? 'var(--accent-warning)' : 'var(--accent-danger)' }}>
+              <div style={{ background: 'var(--bg-surface)', padding: '0.85rem 0.4rem', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid var(--border-color)', minWidth: 0 }}>
+                <div style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, color: report.overallScore >= 75 ? 'var(--accent-success)' : report.overallScore >= 50 ? 'var(--accent-warning)' : 'var(--accent-danger)' }}>
                   {report.overallScore}%
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Overall ATS Score</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, wordBreak: 'break-word' }}>Overall ATS</div>
               </div>
 
-              <div style={{ background: 'var(--bg-surface)', padding: '1.25rem', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '2.4rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
+              <div style={{ background: 'var(--bg-surface)', padding: '0.85rem 0.4rem', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid var(--border-color)', minWidth: 0 }}>
+                <div style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, color: 'var(--accent-primary)' }}>
                   {report.jobMatchScore}%
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Job Match</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, wordBreak: 'break-word' }}>Job Match</div>
               </div>
 
-              <div style={{ background: 'var(--bg-surface)', padding: '1.25rem', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '2.4rem', fontWeight: 800, color: 'var(--accent-secondary)' }}>
+              <div style={{ background: 'var(--bg-surface)', padding: '0.85rem 0.4rem', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid var(--border-color)', minWidth: 0 }}>
+                <div style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, color: 'var(--accent-secondary)' }}>
                   {report.formattingScore}%
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Formatting</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, wordBreak: 'break-word' }}>Formatting</div>
               </div>
             </div>
 
             {/* Summary Text */}
-            <div style={{ background: 'rgba(99, 102, 241, 0.08)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-primary)', fontSize: '0.9rem' }}>
+            <div style={{ background: 'rgba(99, 102, 241, 0.08)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-primary)', fontSize: '0.88rem', lineHeight: 1.5, wordBreak: 'break-word' }}>
               {report.summary}
             </div>
 
             {/* Passed Checks */}
-            {report.passedChecks && report.passedChecks.length > 0 && (
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--accent-success)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <CheckCircle2 size={18} /> Passed ATS Checks
-                </h3>
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                  {report.passedChecks.map((item, i) => (
-                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
-                      <span style={{ color: 'var(--accent-success)' }}>✓</span> {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent-success)' }}>
+                <CheckCircle2 size={18} /> Passed ATS Checks ({report.passedChecks.length})
+              </h3>
+              <ul style={{ paddingLeft: '1.25rem', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                {report.passedChecks.map((check, idx) => (
+                  <li key={idx} style={{ marginBottom: '0.4rem', wordBreak: 'break-word' }}>{check}</li>
+                ))}
+              </ul>
+            </div>
 
             {/* Missing Keywords */}
             {report.missingKeywords && report.missingKeywords.length > 0 && (
               <div style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--accent-warning)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <AlertTriangle size={18} /> Important Missing Keywords for {jobTitle}
+                <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent-warning)' }}>
+                  <AlertTriangle size={18} /> Missing Keywords for "{jobTitle}"
                 </h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {report.missingKeywords.map((kw, i) => (
-                    <span key={i} className="badge badge-warning" style={{ textTransform: 'capitalize' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {report.missingKeywords.map((kw, idx) => (
+                    <span key={idx} className="badge badge-warning" style={{ fontSize: '0.78rem' }}>
                       + {kw}
                     </span>
                   ))}
@@ -381,22 +392,13 @@ export default function ATSTester() {
 
             {/* Recommendations */}
             {report.recommendations && report.recommendations.length > 0 && (
-              <div>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-heading)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Sparkles size={18} color="var(--accent-primary)" /> Recommendations to Improve ATS Ranking
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent-primary)' }}>
+                  <Sparkles size={18} /> Recommendations to Improve ATS Ranking
                 </h3>
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                  {report.recommendations.map((rec, i) => (
-                    <li key={i} style={{
-                      padding: '0.75rem',
-                      background: 'var(--bg-surface)',
-                      borderRadius: 'var(--radius-sm)',
-                      marginBottom: '0.5rem',
-                      fontSize: '0.85rem',
-                      borderLeft: '3px solid var(--accent-primary)'
-                    }}>
-                      {rec}
-                    </li>
+                <ul style={{ paddingLeft: '1.25rem', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                  {report.recommendations.map((rec, idx) => (
+                    <li key={idx} style={{ marginBottom: '0.4rem', wordBreak: 'break-word' }}>{rec}</li>
                   ))}
                 </ul>
               </div>
