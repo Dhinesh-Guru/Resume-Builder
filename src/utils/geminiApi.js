@@ -183,7 +183,6 @@ function getKeywordsForJobTitle(jobTitle) {
 
 /**
  * Single Unified Role Match Scoring Calculation
- * Used deterministically across all evaluations
  */
 function calculateRoleMatchScore(resumeText, jobTitle, keywords) {
   const lowerText = (resumeText || '').toLowerCase();
@@ -210,17 +209,22 @@ function calculateRoleMatchScore(resumeText, jobTitle, keywords) {
 }
 
 /**
- * Analyzes resume content against a job title for ATS compatibility.
+ * Analyzes resume content against a job title for ATS compatibility using Gemini AI
+ * with multi-model fallbacks & error handling.
  */
 export async function analyzeResumeWithGemini(resumeText, jobTitle) {
-  const apiKey = getStoredApiKey();
+  const apiKey = getStoredApiKey() ? getStoredApiKey().trim() : '';
 
   if (apiKey) {
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeAIModel({ model: 'gemini-1.5-flash' });
+    const candidateModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-pro'];
+    let lastError = null;
 
-      const prompt = `
+    for (const modelName of candidateModels) {
+      try {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeAIModel({ model: modelName });
+
+        const prompt = `
 You are an expert ATS Auditor and Senior HR Recruiter.
 Analyze the following resume text specifically for the target job position: "${jobTitle}".
 
@@ -253,18 +257,28 @@ Return strictly a valid JSON object matching this exact structure:
 }
 Do not return any markdown formatting outside the JSON codeblock.`;
 
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
-      const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        const cleanJson = jsonMatch ? jsonMatch[0] : responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanJson);
 
-      return {
-        ...parsed,
-        source: 'gemini-ai'
-      };
-    } catch (err) {
-      console.warn('Gemini API call failed, falling back to smart local analyzer:', err);
+        return {
+          ...parsed,
+          source: 'gemini-ai'
+        };
+      } catch (err) {
+        console.warn(`Gemini model ${modelName} call failed:`, err);
+        lastError = err;
+      }
     }
+
+    console.error('All Gemini AI models failed:', lastError);
+    const fallback = performLocalATSAnalysis(resumeText, jobTitle);
+    return {
+      ...fallback,
+      apiError: lastError?.message || 'Gemini API call failed. Check your API key or network connection.'
+    };
   }
 
   return performLocalATSAnalysis(resumeText, jobTitle);
@@ -272,8 +286,7 @@ Do not return any markdown formatting outside the JSON codeblock.`;
 
 /**
  * Evaluates the resume text across ALL role categories in KEYWORD_DICT
- * to find the single BEST fitting job role for the candidate's resume,
- * completely INDEPENDENT of what position title the user selected to test in the dropdown.
+ * to find the single BEST fitting job role for the candidate's resume.
  */
 function detectBestMatchingRole(resumeText) {
   let bestRoleKey = 'fullstack_dev';

@@ -258,6 +258,25 @@ export default function ATSTester() {
               </span>
             </div>
 
+            {/* Gemini API Alert Warning if API Key failed */}
+            {report.apiError && (
+              <div style={{
+                padding: '0.75rem 1rem',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--accent-danger)',
+                fontSize: '0.85rem',
+                marginBottom: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+                <span><strong>Gemini AI Notice:</strong> {report.apiError} Falling back to Smart Heuristics.</span>
+              </div>
+            )}
+
             {/* Best Role Match Notification Banner */}
             {report.bestMatchingRole && (
               <div style={{
