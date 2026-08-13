@@ -256,6 +256,15 @@ async function discoverModelEndpoint(apiKey) {
 }
 
 /**
+ * Safely parses integer scores with fallback guarantees.
+ */
+function safeNum(val, fallback) {
+  if (val === undefined || val === null) return fallback;
+  const parsed = parseInt(val, 10);
+  return isNaN(parsed) || parsed <= 10 ? fallback : parsed;
+}
+
+/**
  * Robust, multi-stage Gemini AI response parser with Regex fallback extractor.
  * NEVER FAILS even if Gemini outputs malformed or conversational text.
  */
@@ -286,8 +295,6 @@ function parseGeminiResponse(responseText, localBaseline, jobTitle) {
   }
 
   // Final Regex Fallback Extractor
-  console.warn('JSON.parse failed on Gemini output, extracting fields via Regex');
-
   const extractNum = (key, defaultVal) => {
     const match = responseText.match(new RegExp(`"${key}"\\s*:\\s*(\\d+)`, 'i')) ||
                   responseText.match(new RegExp(`${key}[^\\d]*(\\d+)`, 'i'));
@@ -398,14 +405,13 @@ Return ONLY a raw JSON object (no markdown, no conversational text) with this ex
 
       // Compute local baseline rules for fallbacks & regex extraction
       const localBaseline = performLocalATSAnalysis(resumeText, jobTitle);
+      const parsed = parseGeminiResponse(responseText, localBaseline, jobTitle) || {};
 
-      const parsed = parseGeminiResponse(responseText, localBaseline, jobTitle);
-
-      // Normalize numerical scores
-      const overallScore = Math.min(100, Math.max(10, parseInt(parsed.overallScore || parsed.overall_score || parsed.overall || localBaseline.overallScore)));
-      const jobMatchScore = Math.min(100, Math.max(10, parseInt(parsed.jobMatchScore || parsed.job_match_score || parsed.jobMatch || localBaseline.jobMatchScore)));
-      const formattingScore = Math.min(100, Math.max(10, parseInt(parsed.formattingScore || parsed.formatting_score || parsed.formatting || localBaseline.formattingScore)));
-      const keywordScore = Math.min(100, Math.max(10, parseInt(parsed.keywordScore || parsed.keyword_score || localBaseline.keywordScore)));
+      // Normalize numerical scores using safeNum fallback guarantee
+      const overallScore = safeNum(parsed.overallScore || parsed.overall_score || parsed.overall, localBaseline.overallScore);
+      const jobMatchScore = safeNum(parsed.jobMatchScore || parsed.job_match_score || parsed.jobMatch, localBaseline.jobMatchScore);
+      const formattingScore = safeNum(parsed.formattingScore || parsed.formatting_score || parsed.formatting, localBaseline.formattingScore);
+      const keywordScore = safeNum(parsed.keywordScore || parsed.keyword_score, localBaseline.keywordScore);
 
       // Merge passedChecks, missingKeywords, recommendations so they are NEVER empty!
       const passedChecks = Array.isArray(parsed.passedChecks) && parsed.passedChecks.length > 0 
