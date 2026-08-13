@@ -6,138 +6,73 @@ export default function Navbar({ activeTab, setActiveTab, theme, toggleTheme, on
   const hasKey = !!getStoredApiKey();
 
   return (
-    <header style={{
+    <header className="navbar-header" style={{
       position: 'sticky',
       top: 0,
       zIndex: 100,
       background: 'var(--bg-glass)',
       backdropFilter: 'blur(16px)',
+      WebkitBackdropFilter: 'blur(16px)',
       borderBottom: '1px solid var(--border-color)',
-      padding: '0.85rem 0'
+      padding: '0.65rem 0',
+      width: '100%'
     }}>
-      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="container navbar-container">
         {/* Brand Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }} onClick={() => setActiveTab('builder')}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#ffffff',
-            boxShadow: '0 4px 12px var(--accent-glow)'
-          }}>
-            <FileText size={22} />
+        <div className="navbar-brand" onClick={() => setActiveTab('builder')}>
+          <div className="brand-icon">
+            <FileText size={20} />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.25rem', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <h2 className="brand-title">
               ATS<span className="gradient-text">ResumePro</span>
             </h2>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>Smart Builder & Matcher</p>
+            <p className="brand-subtitle">Smart Builder & Matcher</p>
           </div>
         </div>
 
         {/* Center Nav Tabs */}
-        <nav style={{
-          display: 'flex',
-          background: 'var(--bg-surface)',
-          padding: '0.3rem',
-          borderRadius: 'var(--radius-full)',
-          border: '1px solid var(--border-color)'
-        }}>
+        <nav className="navbar-tabs">
           <button
             onClick={() => setActiveTab('builder')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.55rem 1.1rem',
-              borderRadius: 'var(--radius-full)',
-              border: 'none',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all var(--transition-fast)',
-              background: activeTab === 'builder' ? 'var(--accent-primary)' : 'transparent',
-              color: activeTab === 'builder' ? '#ffffff' : 'var(--text-muted)'
-            }}
+            className={`nav-tab-btn ${activeTab === 'builder' ? 'active' : ''}`}
           >
-            <FileText size={16} /> Resume Builder
+            <FileText size={15} /> <span>Resume Builder</span>
           </button>
 
           <button
             onClick={() => setActiveTab('tester')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.55rem 1.1rem',
-              borderRadius: 'var(--radius-full)',
-              border: 'none',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all var(--transition-fast)',
-              background: activeTab === 'tester' ? 'var(--accent-primary)' : 'transparent',
-              color: activeTab === 'tester' ? '#ffffff' : 'var(--text-muted)'
-            }}
+            className={`nav-tab-btn ${activeTab === 'tester' ? 'active' : ''}`}
           >
-            <CheckSquare size={16} /> ATS Tester
+            <CheckSquare size={15} /> <span>ATS Tester</span>
           </button>
 
           <button
             onClick={() => setActiveTab('suggestions')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.55rem 1.1rem',
-              borderRadius: 'var(--radius-full)',
-              border: 'none',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all var(--transition-fast)',
-              background: activeTab === 'suggestions' ? 'var(--accent-primary)' : 'transparent',
-              color: activeTab === 'suggestions' ? '#ffffff' : 'var(--text-muted)'
-            }}
+            className={`nav-tab-btn ${activeTab === 'suggestions' ? 'active' : ''}`}
           >
-            <Search size={16} /> Job Suggestions
+            <Search size={15} /> <span>Job Suggestions</span>
           </button>
         </nav>
 
         {/* Controls: Theme & Key */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <div className="navbar-controls">
           <button
             onClick={onOpenKeyModal}
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm ai-settings-btn"
             title="Configure Gemini AI Key"
-            style={{ position: 'relative' }}
           >
-            <Key size={16} />
-            <span style={{ fontSize: '0.8rem' }}>AI Settings</span>
-            {hasKey && (
-              <span style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--accent-success)'
-              }} />
-            )}
+            <Key size={15} />
+            <span>AI Settings</span>
+            {hasKey && <span className="key-active-dot" />}
           </button>
 
           <button
             onClick={toggleTheme}
-            className="btn btn-secondary btn-sm"
-            style={{ padding: '0.5rem', borderRadius: '50%' }}
+            className="btn btn-secondary btn-sm theme-toggle-btn"
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
           >
-            {theme === 'dark' ? <Sun size={18} color="#f59e0b" /> : <Moon size={18} color="#6366f1" />}
+            {theme === 'dark' ? <Sun size={17} color="#f59e0b" /> : <Moon size={17} color="#6366f1" />}
           </button>
         </div>
       </div>
