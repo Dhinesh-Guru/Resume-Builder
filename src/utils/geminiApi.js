@@ -256,8 +256,57 @@ async function discoverModelEndpoint(apiKey) {
 }
 
 /**
- * Super lightweight, fast REST API call to Google Gemini AI.
- * Includes dynamic model discovery & JSON normalization.
+ * Bulletproof JSON object extractor that handles outer text, markdown fences,
+ * and string escapes cleanly.
+ */
+function extractFirstJsonObject(str) {
+  if (!str) return null;
+  
+  let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const firstBrace = clean.indexOf('{');
+  if (firstBrace === -1) return null;
+
+  let braceCount = 0;
+  let inString = false;
+  let isEscaped = false;
+
+  for (let i = firstBrace; i < clean.length; i++) {
+    const char = clean[i];
+
+    if (inString) {
+      if (char === '\\' && !isEscaped) {
+        isEscaped = true;
+      } else {
+        if (char === '"' && !isEscaped) {
+          inString = false;
+        }
+        isEscaped = false;
+      }
+    } else {
+      if (char === '"') {
+        inString = true;
+      } else if (char === '{') {
+        braceCount++;
+      } else if (char === '}') {
+        braceCount--;
+        if (braceCount === 0) {
+          const jsonSub = clean.substring(firstBrace, i + 1);
+          try {
+            return JSON.parse(jsonSub);
+          } catch (e) {
+            const fixedJson = jsonSub.replace(/,\s*([\}\]])/g, '$1');
+            return JSON.parse(fixedJson);
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Fast REST API call to Google Gemini AI with generationConfig & robust JSON parsing.
  */
 export async function analyzeResumeWithGemini(resumeText, jobTitle) {
   const apiKey = getStoredApiKey() ? getStoredApiKey().trim() : '';
@@ -281,7 +330,7 @@ Analyze the following resume text specifically for the target job position: "${j
 
 RESUME TEXT:
 """
-${resumeText}
+${resumeText.slice(0, 4000)}
 """
 
 Evaluate:
@@ -312,7 +361,11 @@ Return ONLY a raw JSON object (no markdown, no code blocks) with this exact key 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 1024
+          }
         })
       });
 
@@ -334,9 +387,10 @@ Return ONLY a raw JSON object (no markdown, no code blocks) with this exact key 
         throw new Error('Empty response received from Gemini API.');
       }
 
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      const cleanJson = jsonMatch ? jsonMatch[0] : responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
+      const parsed = extractFirstJsonObject(responseText);
+      if (!parsed) {
+        throw new Error('Could not parse valid JSON from Gemini AI output.');
+      }
 
       // Normalize values to ensure numbers are always present
       const overallScore = Math.min(100, Math.max(10, parseInt(parsed.overallScore || parsed.overall_score || parsed.overall || 75)));
