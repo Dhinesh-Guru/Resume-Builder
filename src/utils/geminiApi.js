@@ -209,20 +209,74 @@ function calculateRoleMatchScore(resumeText, jobTitle, keywords) {
 }
 
 /**
+ * Dynamically queries Google Generative Language API's ModelService.ListModels
+ * to find all active model endpoints authorized for the user's API key.
+ */
+async function fetchSupportedModelUrls(apiKey) {
+  const endpoints = [];
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.models && Array.isArray(data.models)) {
+        const supported = data.models.filter(m => 
+          m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent')
+        );
+
+        supported.forEach(m => {
+          // m.name is e.g. "models/gemini-1.5-flash-001" or "models/gemini-1.0-pro"
+          endpoints.push(`https://generativelanguage.googleapis.com/v1beta/${m.name}:generateContent`);
+          endpoints.push(`https://generativelanguage.googleapis.com/v1/${m.name}:generateContent`);
+        });
+      }
+    } else {
+      const errJson = await res.json().catch(() => ({}));
+      if (errJson?.error?.message) {
+        throw new Error(errJson.error.message);
+      }
+    }
+  } catch (e) {
+    console.warn('ListModels query failed or returned error:', e);
+    if (e.message && e.message.includes('API key')) {
+      throw e; // Rethrow key errors so user gets instant notification
+    }
+  }
+
+  // Fallback defaults if ListModels returns empty
+  if (endpoints.length === 0) {
+    endpoints.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent'
+    );
+  }
+
+  return endpoints;
+}
+
+/**
  * Direct REST API call to Google Generative Language API
- * Supports v1beta and v1 endpoints across gemini-1.5-flash, gemini-2.0-flash, gemini-1.5-pro
+ * Uses dynamic ModelService discovery.
  */
 export async function analyzeResumeWithGemini(resumeText, jobTitle) {
   const apiKey = getStoredApiKey() ? getStoredApiKey().trim() : '';
 
   if (apiKey) {
-    const endpoints = [
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-      'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent'
-    ];
+    let endpoints = [];
+    let lastError = null;
+
+    try {
+      endpoints = await fetchSupportedModelUrls(apiKey);
+    } catch (keyErr) {
+      console.error('Invalid API Key detected:', keyErr);
+      const fallback = performLocalATSAnalysis(resumeText, jobTitle);
+      return {
+        ...fallback,
+        apiError: keyErr.message || 'Invalid Gemini API Key provided.'
+      };
+    }
 
     const prompt = `
 You are an expert ATS Auditor and Senior HR Recruiter.
@@ -256,8 +310,6 @@ Return strictly a valid JSON object matching this exact structure:
   }
 }
 Do not return any markdown formatting outside the JSON codeblock.`;
-
-    let lastError = null;
 
     for (const url of endpoints) {
       try {
