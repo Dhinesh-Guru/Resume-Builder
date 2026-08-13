@@ -306,7 +306,7 @@ function extractFirstJsonObject(str) {
 }
 
 /**
- * Fast REST API call to Google Gemini AI with generationConfig & robust JSON parsing.
+ * Fast REST API call to Google Gemini AI with fallback merging and independent Best Role detection.
  */
 export async function analyzeResumeWithGemini(resumeText, jobTitle) {
   const apiKey = getStoredApiKey() ? getStoredApiKey().trim() : '';
@@ -337,7 +337,6 @@ Evaluate:
 1. Overall ATS Formatting & Readability (0-100)
 2. Job Relevance & Keyword Alignment for ${jobTitle} (0-100)
 3. Formatting Score (0-100)
-4. Best Matching Role: Identify the exact professional job title this resume is BEST suited for across ALL industries, along with its match score (0-100).
 
 Return ONLY a raw JSON object (no markdown, no code blocks) with this exact key structure:
 {
@@ -345,15 +344,11 @@ Return ONLY a raw JSON object (no markdown, no code blocks) with this exact key 
   "jobMatchScore": 68,
   "formattingScore": 82,
   "keywordScore": 70,
-  "summary": "Concise summary of the resume suitability.",
-  "missingKeywords": ["keyword1", "keyword2"],
-  "passedChecks": ["Check 1 passed", "Check 2 passed"],
-  "warnings": ["Warning 1"],
-  "recommendations": ["Recommendation 1"],
-  "bestMatchingRole": {
-    "title": "Chef / Culinary Professional",
-    "matchScore": 78
-  }
+  "summary": "Detailed 2 sentence summary of resume strengths and alignment.",
+  "missingKeywords": ["important_keyword1", "important_keyword2"],
+  "passedChecks": ["Valid contact info found", "Standard sections present"],
+  "warnings": ["Lacks numerical metrics"],
+  "recommendations": ["Add quantified achievements to experience bullets", "Include missing domain keywords for ${jobTitle}"]
 }`;
 
     try {
@@ -392,29 +387,42 @@ Return ONLY a raw JSON object (no markdown, no code blocks) with this exact key 
         throw new Error('Could not parse valid JSON from Gemini AI output.');
       }
 
-      // Normalize values to ensure numbers are always present
-      const overallScore = Math.min(100, Math.max(10, parseInt(parsed.overallScore || parsed.overall_score || parsed.overall || 75)));
-      const jobMatchScore = Math.min(100, Math.max(10, parseInt(parsed.jobMatchScore || parsed.job_match_score || parsed.jobMatch || 70)));
-      const formattingScore = Math.min(100, Math.max(10, parseInt(parsed.formattingScore || parsed.formatting_score || parsed.formatting || 80)));
-      const keywordScore = Math.min(100, Math.max(10, parseInt(parsed.keywordScore || parsed.keyword_score || 70)));
+      // Compute local baseline rules for fallbacks
+      const localBaseline = performLocalATSAnalysis(resumeText, jobTitle);
 
-      const bestRoleTitle = parsed.bestMatchingRole?.title || parsed.best_matching_role?.title || jobTitle;
-      const bestRoleScore = parseInt(parsed.bestMatchingRole?.matchScore || parsed.best_matching_role?.match_score || jobMatchScore);
+      // Normalize numerical scores
+      const overallScore = Math.min(100, Math.max(10, parseInt(parsed.overallScore || parsed.overall_score || parsed.overall || localBaseline.overallScore)));
+      const jobMatchScore = Math.min(100, Math.max(10, parseInt(parsed.jobMatchScore || parsed.job_match_score || parsed.jobMatch || localBaseline.jobMatchScore)));
+      const formattingScore = Math.min(100, Math.max(10, parseInt(parsed.formattingScore || parsed.formatting_score || parsed.formatting || localBaseline.formattingScore)));
+      const keywordScore = Math.min(100, Math.max(10, parseInt(parsed.keywordScore || parsed.keyword_score || localBaseline.keywordScore)));
+
+      // Merge passedChecks, missingKeywords, recommendations so they are NEVER empty!
+      const passedChecks = Array.isArray(parsed.passedChecks) && parsed.passedChecks.length > 0 
+        ? parsed.passedChecks 
+        : localBaseline.passedChecks;
+
+      const missingKeywords = Array.isArray(parsed.missingKeywords) && parsed.missingKeywords.length > 0 
+        ? parsed.missingKeywords 
+        : localBaseline.missingKeywords;
+
+      const recommendations = Array.isArray(parsed.recommendations) && parsed.recommendations.length > 0 
+        ? parsed.recommendations 
+        : localBaseline.recommendations;
+
+      // Always calculate the single #1 BEST role match across ALL industries independently!
+      const bestMatchingRole = detectBestMatchingRole(resumeText);
 
       return {
         overallScore,
         jobMatchScore,
         formattingScore,
         keywordScore,
-        summary: parsed.summary || `Resume shows an ATS Score of ${overallScore}% for ${jobTitle}.`,
-        missingKeywords: Array.isArray(parsed.missingKeywords) ? parsed.missingKeywords : [],
-        passedChecks: Array.isArray(parsed.passedChecks) ? parsed.passedChecks : ['Resume structure parsed successfully'],
-        warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
-        recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
-        bestMatchingRole: {
-          title: bestRoleTitle,
-          matchScore: bestRoleScore
-        },
+        summary: parsed.summary || localBaseline.summary,
+        missingKeywords,
+        passedChecks,
+        warnings: Array.isArray(parsed.warnings) && parsed.warnings.length > 0 ? parsed.warnings : localBaseline.warnings,
+        recommendations,
+        bestMatchingRole,
         source: 'gemini-ai'
       };
     } catch (err) {

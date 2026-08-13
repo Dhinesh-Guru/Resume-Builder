@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Key, ExternalLink, X, Check, Info } from 'lucide-react';
+import { Key, ExternalLink, X, Check, Info, Sparkles, ShieldCheck, Zap } from 'lucide-react';
 import { getStoredApiKey, setStoredApiKey } from '../utils/geminiApi';
 
 export default function ApiKeyModal({ isOpen, onClose }) {
@@ -38,7 +38,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
       zIndex: 1000,
       padding: '1rem'
     }}>
-      <div className="glass-card animate-fade-in" style={{ maxWidth: '540px', width: '100%', position: 'relative' }}>
+      <div className="glass-card animate-fade-in" style={{ maxWidth: '560px', width: '100%', position: 'relative' }}>
         <button 
           onClick={onClose}
           style={{
@@ -69,27 +69,47 @@ export default function ApiKeyModal({ isOpen, onClose }) {
           </div>
           <div>
             <h3 style={{ fontSize: '1.25rem' }}>Google Gemini AI Settings</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Power intelligent ATS scoring & job parsing</p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Power intelligent ATS scoring & recruiter insights</p>
           </div>
         </div>
 
+        {/* Benefits & Comparison Note Box */}
         <div style={{
-          background: 'rgba(99, 102, 241, 0.08)',
-          border: '1px solid rgba(99, 102, 241, 0.2)',
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(99, 102, 241, 0.08))',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
           borderRadius: 'var(--radius-sm)',
-          padding: '0.9rem',
+          padding: '0.9rem 1rem',
+          marginBottom: '1rem',
+          fontSize: '0.83rem',
+          lineHeight: '1.5'
+        }}>
+          <div style={{ fontWeight: 700, color: 'var(--accent-success)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.9rem' }}>
+            <Sparkles size={16} /> Why use Gemini AI as your ATS Source?
+          </div>
+          <ul style={{ paddingLeft: '1.2rem', color: 'var(--text-main)', margin: 0 }}>
+            <li><strong>🤖 Recruiter-Level Nuance</strong>: Gemini AI evaluates your resume like a senior human recruiter, understanding contextual achievements, leadership impact, and implicit domain skills beyond simple keyword counts.</li>
+            <li><strong>✍️ Tailored Suggestions</strong>: Generates personalized, executive-level improvement tips specifically customized for your exact resume text and target role.</li>
+            <li><strong>⚡ Smart Heuristics Fallback (Default)</strong>: 100% offline, free & fast local rule engine. Ideal for offline use or quick instant checks!</li>
+          </ul>
+        </div>
+
+        {/* How to Get Key Instructions */}
+        <div style={{
+          background: 'rgba(99, 102, 241, 0.06)',
+          border: '1px solid rgba(99, 102, 241, 0.18)',
+          borderRadius: 'var(--radius-sm)',
+          padding: '0.85rem 1rem',
           marginBottom: '1.25rem',
-          fontSize: '0.85rem',
+          fontSize: '0.83rem',
           lineHeight: '1.5'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, color: 'var(--accent-primary)', marginBottom: '0.3rem' }}>
-            <Info size={16} /> How to get a FREE Gemini API Key:
+            <Info size={16} /> How to get a FREE Gemini API Key (100% Free):
           </div>
-          <ol style={{ paddingLeft: '1.2rem', color: 'var(--text-main)' }}>
-            <li>Go to <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', fontWeight: 600 }}>Google AI Studio <ExternalLink size={12} style={{ display: 'inline' }} /></a></li>
-            <li>Sign in with your Google account</li>
-            <li>Click <strong>"Get API Key"</strong> & create a free key in 1 click!</li>
-            <li>Paste your key below and click Save.</li>
+          <ol style={{ paddingLeft: '1.2rem', color: 'var(--text-main)', margin: 0 }}>
+            <li>Go to <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', fontWeight: 600, color: 'var(--accent-primary)' }}>Google AI Studio <ExternalLink size={12} style={{ display: 'inline' }} /></a></li>
+            <li>Sign in with your Google account & click <strong>"Get API Key"</strong></li>
+            <li>Copy & paste your key below, then click Save.</li>
           </ol>
         </div>
 
@@ -103,7 +123,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
             onChange={(e) => setKeyInput(e.target.value)}
           />
           <small style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-            Stored locally in your browser. If left blank, the app will use our built-in smart local analyzer.
+            Stored locally in your browser. If left blank, the app uses Smart Heuristics automatically.
           </small>
         </div>
 
