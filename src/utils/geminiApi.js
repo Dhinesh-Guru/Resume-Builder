@@ -209,74 +209,17 @@ function calculateRoleMatchScore(resumeText, jobTitle, keywords) {
 }
 
 /**
- * Dynamically queries Google Generative Language API's ModelService.ListModels
- * to find all active model endpoints authorized for the user's API key.
- */
-async function fetchSupportedModelUrls(apiKey) {
-  const endpoints = [];
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.models && Array.isArray(data.models)) {
-        const supported = data.models.filter(m => 
-          m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent')
-        );
-
-        supported.forEach(m => {
-          // m.name is e.g. "models/gemini-1.5-flash-001" or "models/gemini-1.0-pro"
-          endpoints.push(`https://generativelanguage.googleapis.com/v1beta/${m.name}:generateContent`);
-          endpoints.push(`https://generativelanguage.googleapis.com/v1/${m.name}:generateContent`);
-        });
-      }
-    } else {
-      const errJson = await res.json().catch(() => ({}));
-      if (errJson?.error?.message) {
-        throw new Error(errJson.error.message);
-      }
-    }
-  } catch (e) {
-    console.warn('ListModels query failed or returned error:', e);
-    if (e.message && e.message.includes('API key')) {
-      throw e; // Rethrow key errors so user gets instant notification
-    }
-  }
-
-  // Fallback defaults if ListModels returns empty
-  if (endpoints.length === 0) {
-    endpoints.push(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-      'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent'
-    );
-  }
-
-  return endpoints;
-}
-
-/**
- * Direct REST API call to Google Generative Language API
- * Uses dynamic ModelService discovery.
+ * Super lightweight, fast REST API call to Google Gemini AI.
+ * Includes strict timeout & robust JSON parsing normalization to guarantee valid numbers.
  */
 export async function analyzeResumeWithGemini(resumeText, jobTitle) {
   const apiKey = getStoredApiKey() ? getStoredApiKey().trim() : '';
 
   if (apiKey) {
-    let endpoints = [];
-    let lastError = null;
-
-    try {
-      endpoints = await fetchSupportedModelUrls(apiKey);
-    } catch (keyErr) {
-      console.error('Invalid API Key detected:', keyErr);
-      const fallback = performLocalATSAnalysis(resumeText, jobTitle);
-      return {
-        ...fallback,
-        apiError: keyErr.message || 'Invalid Gemini API Key provided.'
-      };
-    }
+    const candidateEndpoints = [
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent'
+    ];
 
     const prompt = `
 You are an expert ATS Auditor and Senior HR Recruiter.
@@ -288,38 +231,45 @@ ${resumeText}
 """
 
 Evaluate:
-1. Overall ATS Formatting & Readability
-2. Job Relevance & Keyword Alignment for ${jobTitle}
-3. Impact & Quantified Achievements
-4. Best Matching Role: Identify the exact professional job title this resume is BEST suited for across ALL industries, along with its independent best match score (0-100%).
+1. Overall ATS Formatting & Readability (0-100)
+2. Job Relevance & Keyword Alignment for ${jobTitle} (0-100)
+3. Formatting Score (0-100)
+4. Best Matching Role: Identify the exact professional job title this resume is BEST suited for across ALL industries, along with its match score (0-100).
 
-Return strictly a valid JSON object matching this exact structure:
+Return ONLY a raw JSON object (no markdown, no code blocks) with this exact key structure:
 {
-  "overallScore": number (0 to 100),
-  "jobMatchScore": number (0 to 100),
-  "formattingScore": number (0 to 100),
-  "keywordScore": number (0 to 100),
-  "summary": "2 sentence executive summary of the resume suitability",
-  "missingKeywords": ["list", "of", "important", "missing", "keywords", "for", "${jobTitle}"],
-  "passedChecks": [ "Check 1 passed...", "Check 2 passed..." ],
-  "warnings": [ "Warning 1...", "Warning 2..." ],
-  "recommendations": [ "Recommendation 1", "Recommendation 2" ],
+  "overallScore": 75,
+  "jobMatchScore": 68,
+  "formattingScore": 82,
+  "keywordScore": 70,
+  "summary": "Concise summary of the resume suitability.",
+  "missingKeywords": ["keyword1", "keyword2"],
+  "passedChecks": ["Check 1 passed", "Check 2 passed"],
+  "warnings": ["Warning 1"],
+  "recommendations": ["Recommendation 1"],
   "bestMatchingRole": {
-    "title": "Exact Role Title standard name",
-    "matchScore": number (0 to 100)
+    "title": "Chef / Culinary Professional",
+    "matchScore": 78
   }
-}
-Do not return any markdown formatting outside the JSON codeblock.`;
+}`;
 
-    for (const url of endpoints) {
+    let lastError = null;
+
+    for (const url of candidateEndpoints) {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 sec timeout
+
         const response = await fetch(`${url}?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }]
           })
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
@@ -340,8 +290,29 @@ Do not return any markdown formatting outside the JSON codeblock.`;
         const cleanJson = jsonMatch ? jsonMatch[0] : responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleanJson);
 
+        // Normalize values to ensure numbers are always present
+        const overallScore = Math.min(100, Math.max(10, parseInt(parsed.overallScore || parsed.overall_score || parsed.overall || 75)));
+        const jobMatchScore = Math.min(100, Math.max(10, parseInt(parsed.jobMatchScore || parsed.job_match_score || parsed.jobMatch || 70)));
+        const formattingScore = Math.min(100, Math.max(10, parseInt(parsed.formattingScore || parsed.formatting_score || parsed.formatting || 80)));
+        const keywordScore = Math.min(100, Math.max(10, parseInt(parsed.keywordScore || parsed.keyword_score || 70)));
+
+        const bestRoleTitle = parsed.bestMatchingRole?.title || parsed.best_matching_role?.title || jobTitle;
+        const bestRoleScore = parseInt(parsed.bestMatchingRole?.matchScore || parsed.best_matching_role?.match_score || jobMatchScore);
+
         return {
-          ...parsed,
+          overallScore,
+          jobMatchScore,
+          formattingScore,
+          keywordScore,
+          summary: parsed.summary || `Resume shows an ATS Score of ${overallScore}% for ${jobTitle}.`,
+          missingKeywords: Array.isArray(parsed.missingKeywords) ? parsed.missingKeywords : [],
+          passedChecks: Array.isArray(parsed.passedChecks) ? parsed.passedChecks : ['Resume structure parsed successfully'],
+          warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
+          recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
+          bestMatchingRole: {
+            title: bestRoleTitle,
+            matchScore: bestRoleScore
+          },
           source: 'gemini-ai'
         };
       } catch (err) {
@@ -350,11 +321,11 @@ Do not return any markdown formatting outside the JSON codeblock.`;
       }
     }
 
-    console.error('All Gemini AI API REST endpoints failed:', lastError);
+    console.error('Gemini AI API REST failed:', lastError);
     const fallback = performLocalATSAnalysis(resumeText, jobTitle);
     return {
       ...fallback,
-      apiError: lastError?.message || 'Gemini API call failed. Check your API key or network connection.'
+      apiError: lastError?.message || 'Gemini API connection timed out or failed.'
     };
   }
 
