@@ -24,34 +24,56 @@ export default function ApiKeyModal({ isOpen, onClose }) {
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
-      backdropFilter: 'blur(8px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '1rem'
-    }}>
-      <div className="glass-card animate-fade-in" style={{ maxWidth: '560px', width: '100%', position: 'relative' }}>
+    <div 
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: '1rem'
+      }}
+    >
+      <div 
+        className="glass-card animate-fade-in" 
+        style={{ 
+          maxWidth: '560px', 
+          width: '100%', 
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          position: 'relative',
+          padding: '1.5rem',
+          boxSizing: 'border-box'
+        }}
+      >
         <button 
           onClick={onClose}
           style={{
-            position: 'absolute',
-            top: '1.25rem',
-            right: '1.25rem',
-            background: 'none',
+            position: 'sticky',
+            float: 'right',
+            top: '0rem',
+            right: '0rem',
+            background: 'rgba(255, 255, 255, 0.1)',
             border: 'none',
+            borderRadius: '50%',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             color: 'var(--text-muted)',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            zIndex: 10
           }}
         >
-          <X size={20} />
+          <X size={18} />
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
@@ -63,13 +85,14 @@ export default function ApiKeyModal({ isOpen, onClose }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--accent-primary)'
+            color: 'var(--accent-primary)',
+            flexShrink: 0
           }}>
             <Key size={22} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.25rem' }}>Google Gemini AI Settings</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Power intelligent ATS scoring & recruiter insights</p>
+            <h3 style={{ fontSize: '1.25rem', margin: 0 }}>Google Gemini AI Settings</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Power intelligent ATS scoring & recruiter insights</p>
           </div>
         </div>
 
@@ -87,9 +110,9 @@ export default function ApiKeyModal({ isOpen, onClose }) {
             <Sparkles size={16} /> Why use Gemini AI as your ATS Source?
           </div>
           <ul style={{ paddingLeft: '1.2rem', color: 'var(--text-main)', margin: 0 }}>
-            <li><strong>🤖 Recruiter-Level Nuance</strong>: Gemini AI evaluates your resume like a senior human recruiter, understanding contextual achievements, leadership impact, and implicit domain skills beyond simple keyword counts.</li>
-            <li><strong>✍️ Tailored Suggestions</strong>: Generates personalized, executive-level improvement tips specifically customized for your exact resume text and target role.</li>
-            <li><strong>⚡ Smart Heuristics Fallback (Default)</strong>: 100% offline, free & fast local rule engine. Ideal for offline use or quick instant checks!</li>
+            <li><strong>🤖 Recruiter-Level Nuance</strong>: Gemini AI evaluates your resume like a senior human recruiter, understanding contextual achievements and leadership impact.</li>
+            <li><strong>✍️ Tailored Suggestions</strong>: Generates personalized, executive-level improvement tips specifically customized for your exact resume text.</li>
+            <li><strong>⚡ Smart Heuristics Fallback</strong>: 100% offline, free & fast local rule engine.</li>
             <li style={{ marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px dashed rgba(16, 185, 129, 0.25)', color: 'var(--text-muted)' }}>
               <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />
               <strong>Processing Speed Note</strong>: Gemini AI communicates securely with Google Cloud servers (~2–4 seconds). Local Smart Heuristics runs instantly (under 50ms).
@@ -117,7 +140,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
           </ol>
         </div>
 
-        <div className="form-group">
+        <div className="form-group" style={{ marginBottom: '1.25rem' }}>
           <label className="form-label">Gemini API Key (Optional)</label>
           <input
             type="password"
@@ -126,12 +149,12 @@ export default function ApiKeyModal({ isOpen, onClose }) {
             value={keyInput}
             onChange={(e) => setKeyInput(e.target.value)}
           />
-          <small style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+          <small style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
             Stored locally in your browser. If left blank, the app uses Smart Heuristics automatically.
           </small>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
           {getStoredApiKey() && (
             <button className="btn btn-danger btn-sm" onClick={handleRemove}>
               Remove Key
