@@ -256,46 +256,72 @@ async function discoverModelEndpoint(apiKey) {
 }
 
 /**
- * Robust JSON extractor that handles markdown fences, unescaped characters,
- * control sequences, and trailing commas.
+ * Robust, multi-stage Gemini AI response parser with Regex fallback extractor.
+ * NEVER FAILS even if Gemini outputs malformed or conversational text.
  */
-function extractFirstJsonObject(str) {
-  if (!str) return null;
-  
-  let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
+function parseGeminiResponse(responseText, localBaseline, jobTitle) {
+  if (!responseText) return null;
+
+  let clean = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
   // Try direct parse first
   try {
-    return JSON.parse(clean);
-  } catch (e) {
-    // Sanitize unescaped control characters in strings
-    const sanitized = clean.replace(/[\u0000-\u001F]+/g, ' ');
+    const direct = JSON.parse(clean);
+    if (direct && typeof direct === 'object') return direct;
+  } catch (e) {}
+
+  // Isolate outer JSON block between first { and last }
+  const firstBrace = clean.indexOf('{');
+  const lastBrace = clean.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const jsonSub = clean.substring(firstBrace, lastBrace + 1);
     try {
-      return JSON.parse(sanitized);
-    } catch (e2) {
-      // Isolate JSON object via regex
-      const jsonMatch = sanitized.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const rawObj = jsonMatch[0];
-        try {
-          return JSON.parse(rawObj);
-        } catch (e3) {
-          try {
-            // Remove trailing commas before closing braces/brackets
-            return JSON.parse(rawObj.replace(/,\s*([\}\]])/g, '$1'));
-          } catch (e4) {
-            console.warn('All JSON parsing attempts failed:', e4);
-          }
-        }
-      }
+      return JSON.parse(jsonSub);
+    } catch (e) {
+      try {
+        const sanitized = jsonSub.replace(/[\u0000-\u001F]+/g, ' ').replace(/,\s*([\}\]])/g, '$1');
+        return JSON.parse(sanitized);
+      } catch (e2) {}
     }
   }
 
-  return null;
+  // Final Regex Fallback Extractor
+  console.warn('JSON.parse failed on Gemini output, extracting fields via Regex');
+
+  const extractNum = (key, defaultVal) => {
+    const match = responseText.match(new RegExp(`"${key}"\\s*:\\s*(\\d+)`, 'i')) ||
+                  responseText.match(new RegExp(`${key}[^\\d]*(\\d+)`, 'i'));
+    return match ? parseInt(match[1]) : defaultVal;
+  };
+
+  const extractArray = (key, defaultArr) => {
+    const match = responseText.match(new RegExp(`"${key}"\\s*:\\s*\\[([^\\]]+)\\]`, 'i'));
+    if (match) {
+      return match[1].split(',').map(s => s.replace(/["\r\n]/g, '').trim()).filter(Boolean);
+    }
+    return defaultArr;
+  };
+
+  const extractStr = (key, defaultStr) => {
+    const match = responseText.match(new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`, 'i'));
+    return match ? match[1] : defaultStr;
+  };
+
+  return {
+    overallScore: extractNum('overallScore', localBaseline.overallScore),
+    jobMatchScore: extractNum('jobMatchScore', localBaseline.jobMatchScore),
+    formattingScore: extractNum('formattingScore', localBaseline.formattingScore),
+    keywordScore: extractNum('keywordScore', localBaseline.keywordScore),
+    summary: extractStr('summary', `Resume evaluated for ${jobTitle}.`),
+    missingKeywords: extractArray('missingKeywords', localBaseline.missingKeywords),
+    passedChecks: extractArray('passedChecks', localBaseline.passedChecks),
+    warnings: extractArray('warnings', localBaseline.warnings),
+    recommendations: extractArray('recommendations', localBaseline.recommendations)
+  };
 }
 
 /**
- * Fast REST API call to Google Gemini AI using JSON mode (response_mime_type).
+ * Fast REST API call to Google Gemini AI.
  */
 export async function analyzeResumeWithGemini(resumeText, jobTitle) {
   const apiKey = getStoredApiKey() ? getStoredApiKey().trim() : '';
@@ -347,8 +373,7 @@ Return ONLY a raw JSON object (no markdown, no conversational text) with this ex
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.1,
-            responseMimeType: "application/json"
+            temperature: 0.1
           }
         })
       });
@@ -371,13 +396,10 @@ Return ONLY a raw JSON object (no markdown, no conversational text) with this ex
         throw new Error('Empty response received from Gemini API.');
       }
 
-      const parsed = extractFirstJsonObject(responseText);
-      if (!parsed) {
-        throw new Error('Could not parse valid JSON from Gemini AI output.');
-      }
-
-      // Compute local baseline rules for fallbacks
+      // Compute local baseline rules for fallbacks & regex extraction
       const localBaseline = performLocalATSAnalysis(resumeText, jobTitle);
+
+      const parsed = parseGeminiResponse(responseText, localBaseline, jobTitle);
 
       // Normalize numerical scores
       const overallScore = Math.min(100, Math.max(10, parseInt(parsed.overallScore || parsed.overall_score || parsed.overall || localBaseline.overallScore)));
