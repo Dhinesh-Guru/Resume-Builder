@@ -209,7 +209,8 @@ function calculateRoleMatchScore(resumeText, jobTitle, keywords) {
 }
 
 /**
- * Queries Google AI Studio ModelCatalog to find the single active model endpoint for the key
+ * Queries Google AI Studio ModelCatalog to find the single active model endpoint for the key,
+ * excluding deprecated models (e.g. gemini-2.5-flash).
  */
 async function discoverModelEndpoint(apiKey) {
   try {
@@ -217,12 +218,24 @@ async function discoverModelEndpoint(apiKey) {
     if (listRes.ok) {
       const listData = await listRes.json();
       if (listData.models && Array.isArray(listData.models)) {
-        const matchingModel = listData.models.find(m => 
-          m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent')
-        );
+        // Filter generateContent models and EXCLUDE deprecated ones
+        const validModels = listData.models.filter(m => {
+          if (!m.supportedGenerationMethods || !m.supportedGenerationMethods.includes('generateContent')) {
+            return false;
+          }
+          const name = (m.name || '').toLowerCase();
+          return !name.includes('2.5') && !name.includes('deprecated') && !name.includes('bison') && !name.includes('embed');
+        });
 
-        if (matchingModel && matchingModel.name) {
-          const modelPath = matchingModel.name.startsWith('models/') ? matchingModel.name : `models/${matchingModel.name}`;
+        // Prioritize active models: gemini-1.5-flash -> gemini-1.5-pro -> gemini-2.0-flash
+        const preferred = validModels.find(m => m.name.includes('gemini-1.5-flash')) ||
+                          validModels.find(m => m.name.includes('gemini-1.5-pro')) ||
+                          validModels.find(m => m.name.includes('gemini-2.0-flash')) ||
+                          validModels[0];
+
+        if (preferred && preferred.name) {
+          const modelPath = preferred.name.startsWith('models/') ? preferred.name : `models/${preferred.name}`;
+          console.log(`Selected active model endpoint: ${modelPath}`);
           return `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent`;
         }
       }
