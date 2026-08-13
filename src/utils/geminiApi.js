@@ -209,22 +209,22 @@ function calculateRoleMatchScore(resumeText, jobTitle, keywords) {
 }
 
 /**
- * Analyzes resume content against a job title for ATS compatibility using Gemini AI
- * with multi-model fallbacks & error handling.
+ * Direct REST API call to Google Generative Language API
+ * Supports v1beta and v1 endpoints across gemini-1.5-flash, gemini-2.0-flash, gemini-1.5-pro
  */
 export async function analyzeResumeWithGemini(resumeText, jobTitle) {
   const apiKey = getStoredApiKey() ? getStoredApiKey().trim() : '';
 
   if (apiKey) {
-    const candidateModels = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-latest'];
-    let lastError = null;
+    const endpoints = [
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent'
+    ];
 
-    for (const modelName of candidateModels) {
-      try {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: modelName });
-
-        const prompt = `
+    const prompt = `
 You are an expert ATS Auditor and Senior HR Recruiter.
 Analyze the following resume text specifically for the target job position: "${jobTitle}".
 
@@ -257,9 +257,32 @@ Return strictly a valid JSON object matching this exact structure:
 }
 Do not return any markdown formatting outside the JSON codeblock.`;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const responseText = response.text();
+    let lastError = null;
+
+    for (const url of endpoints) {
+      try {
+        const response = await fetch(`${url}?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = errData?.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+          console.warn(`Gemini REST endpoint ${url} failed:`, errMsg);
+          if (!lastError) lastError = new Error(errMsg);
+          continue;
+        }
+
+        const data = await response.json();
+        const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!responseText) {
+          throw new Error('Empty response received from Gemini API.');
+        }
 
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         const cleanJson = jsonMatch ? jsonMatch[0] : responseText.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -270,12 +293,12 @@ Do not return any markdown formatting outside the JSON codeblock.`;
           source: 'gemini-ai'
         };
       } catch (err) {
-        console.warn(`Gemini model ${modelName} call failed:`, err);
+        console.warn(`Error calling Gemini REST API at ${url}:`, err);
         if (!lastError) lastError = err;
       }
     }
 
-    console.error('All Gemini AI models failed:', lastError);
+    console.error('All Gemini AI API REST endpoints failed:', lastError);
     const fallback = performLocalATSAnalysis(resumeText, jobTitle);
     return {
       ...fallback,
