@@ -257,7 +257,7 @@ async function discoverModelEndpoint(apiKey) {
 
 /**
  * Super lightweight, fast REST API call to Google Gemini AI.
- * Includes dynamic model discovery, timeout & JSON normalization.
+ * Includes dynamic model discovery & JSON normalization.
  */
 export async function analyzeResumeWithGemini(resumeText, jobTitle) {
   const apiKey = getStoredApiKey() ? getStoredApiKey().trim() : '';
@@ -308,19 +308,13 @@ Return ONLY a raw JSON object (no markdown, no code blocks) with this exact key 
 }`;
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 sec timeout
-
       const response = await fetch(`${targetUrl}?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }]
         })
       });
-
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
