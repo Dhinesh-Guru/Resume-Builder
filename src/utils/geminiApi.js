@@ -216,7 +216,7 @@ export async function analyzeResumeWithGemini(resumeText, jobTitle) {
   const apiKey = getStoredApiKey() ? getStoredApiKey().trim() : '';
 
   if (apiKey) {
-    const candidateModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-pro'];
+    const candidateModels = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-latest'];
     let lastError = null;
 
     for (const modelName of candidateModels) {
@@ -258,7 +258,9 @@ Return strictly a valid JSON object matching this exact structure:
 Do not return any markdown formatting outside the JSON codeblock.`;
 
         const result = await model.generateContent(prompt);
-        const responseText = result.response.text();
+        const response = await result.response;
+        const responseText = response.text();
+
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         const cleanJson = jsonMatch ? jsonMatch[0] : responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleanJson);
@@ -269,7 +271,7 @@ Do not return any markdown formatting outside the JSON codeblock.`;
         };
       } catch (err) {
         console.warn(`Gemini model ${modelName} call failed:`, err);
-        lastError = err;
+        if (!lastError) lastError = err;
       }
     }
 
@@ -380,7 +382,7 @@ export function performLocalATSAnalysis(resumeText, jobTitle) {
   const recommendations = [];
 
   if (hasEmail) passedChecks.push('Valid Email address detected');
-  else warnings.push('No email address found in the resume header');
+  else warnings.push('No email address found in the header');
 
   if (hasPhone) passedChecks.push('Phone number formatting detected');
   else warnings.push('No phone contact number found');
