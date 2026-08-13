@@ -92,7 +92,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
             <li><strong>⚡ Smart Heuristics Fallback (Default)</strong>: 100% offline, free & fast local rule engine. Ideal for offline use or quick instant checks!</li>
             <li style={{ marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px dashed rgba(16, 185, 129, 0.25)', color: 'var(--text-muted)' }}>
               <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />
-              <strong>Processing Speed Note</strong>: Gemini AI communicates securely with Google Cloud servers (~3–8 seconds). Local Smart Heuristics runs instantly (<50ms).
+              <strong>Processing Speed Note</strong>: Gemini AI communicates securely with Google Cloud servers (~2–4 seconds). Local Smart Heuristics runs instantly (under 50ms).
             </li>
           </ul>
         </div>
