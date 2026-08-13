@@ -1,0 +1,16 @@
+I want to build an ATS friendly resume builder. This project should have three parts, one is ATS friendly resume builder that will build an resume with the given details and another one is ATS friendly tester this will help the user's own resume was ATS friendly or not, the last one is suggestions section to suggest the jobs related to the uploaded resume.
+Resume builder section: 
+This should ask the job title at starting for example Developer, Tester, Quality Analyst, Accountant, etc.
+And when the user click one of the job title this should ask them about the details related to the job title for the resume.
+After filling the details this should create an resume and make it downloadable as pdf and some other formats.
+Inform me what are the questions you ask them and I will review them before implementation.
+
+ATS friendly tester section:
+This should ask the user to upload their resume(This should be able to allow pdf or doc or some other valid file format for resume) and also ask for the job title(same like the resume builder)[They should be able to preview their uploaded file so they can delete the file and reupload another one if they upload an wrong file]
+When the user uploaded their resume this should check the resume is ATS friendly and the resume was suitable for the job title.
+This should provide the details about the resume is how much related to the job title and give them suggestions to make it better and more suitable to the job title.
+
+suggestions section:
+This should ask the user to upload their resume and it should have the option to use the builded resume options or recently opened resume option.
+After got the resume the agent must read the resume and search the related job offers in online job platform like Linkedin, Naukri etc. And suggest them the best 10 job offers to apply for.
+This should display the job title, company name, job description, location, salary range(if available), and a link to apply for the job.
