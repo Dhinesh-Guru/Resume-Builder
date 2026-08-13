@@ -222,7 +222,7 @@ export async function analyzeResumeWithGemini(resumeText, jobTitle) {
     for (const modelName of candidateModels) {
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeAIModel({ model: modelName });
+        const model = genAI.getGenerativeModel({ model: modelName });
 
         const prompt = `
 You are an expert ATS Auditor and Senior HR Recruiter.
