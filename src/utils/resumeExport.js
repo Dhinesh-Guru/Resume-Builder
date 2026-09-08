@@ -46,7 +46,15 @@ export function exportResumeToTxt(resumeData, filename = 'ATS_Resume.txt') {
     txt += `PROFESSIONAL SUMMARY\n--------------------\n${resumeData.summary}\n\n`;
   }
 
-  if (resumeData.skills) {
+  if (resumeData.extraAnswers && Object.keys(resumeData.extraAnswers).length > 0) {
+    txt += `TECHNICAL SKILLS\n----------------\n`;
+    for (const [key, value] of Object.entries(resumeData.extraAnswers)) {
+      if (value) {
+        txt += `${key.toUpperCase()}: ${value}\n`;
+      }
+    }
+    txt += `\n`;
+  } else if (resumeData.skills) {
     txt += `CORE SKILLS\n-----------\n${resumeData.skills}\n\n`;
   }
 
@@ -61,19 +69,35 @@ export function exportResumeToTxt(resumeData, filename = 'ATS_Resume.txt') {
     });
   }
 
-  if (resumeData.degree) {
-    txt += `EDUCATION\n---------\n`;
-    txt += `${resumeData.degree} in ${resumeData.fieldOfStudy || ''}\n`;
-    txt += `${resumeData.university || ''} (${resumeData.gradYear || ''})\n\n`;
+  if (resumeData.projects && resumeData.projects.length > 0) {
+    const validProjects = resumeData.projects.filter(p => p.title || p.description);
+    if (validProjects.length > 0) {
+      txt += `KEY PROJECTS\n------------\n`;
+      validProjects.forEach(proj => {
+        txt += `${proj.title || 'Project'}${proj.techStack ? ` (Tech: ${proj.techStack})` : ''}\n`;
+        if (proj.description) {
+          txt += `${proj.description}\n`;
+        }
+        txt += `\n`;
+      });
+    }
   }
 
-  if (resumeData.extraAnswers) {
-    txt += `ADDITIONAL QUALIFICATIONS & DETAILS\n-----------------------------------\n`;
-    for (const [key, value] of Object.entries(resumeData.extraAnswers)) {
-      if (value) {
-        txt += `${key.toUpperCase()}: ${value}\n`;
-      }
+  if (resumeData.certifications && resumeData.certifications.length > 0) {
+    const validCerts = resumeData.certifications.filter(c => c.name);
+    if (validCerts.length > 0) {
+      txt += `CERTIFICATIONS & ACHIEVEMENTS\n-----------------------------\n`;
+      validCerts.forEach(cert => {
+        txt += `${cert.name}${cert.issuer ? ` - ${cert.issuer}` : ''}${cert.year ? ` (${cert.year})` : ''}\n`;
+      });
+      txt += `\n`;
     }
+  }
+
+  if (resumeData.degree || resumeData.university) {
+    txt += `EDUCATION\n---------\n`;
+    txt += `${resumeData.degree || ''} ${resumeData.fieldOfStudy ? `in ${resumeData.fieldOfStudy}` : ''}\n`;
+    txt += `${resumeData.university || ''} (${resumeData.gradYear || ''})\n\n`;
   }
 
   const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });

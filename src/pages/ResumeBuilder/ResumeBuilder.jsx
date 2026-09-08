@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   User, Briefcase, GraduationCap, Award, FileDown, Plus, Trash2, 
-  ArrowRight, ArrowLeft, CheckCircle, Sparkles, AlertCircle, UserCheck
+  ArrowRight, ArrowLeft, CheckCircle, Sparkles, AlertCircle, UserCheck, FolderGit2
 } from 'lucide-react';
 import JobTitleSelector from '../../components/JobTitleSelector';
 import ResumePreview from './ResumePreview';
@@ -25,9 +25,14 @@ export default function ResumeBuilder({ onResumeCreated }) {
     linkedin: '',
     github: '',
     summary: '',
-    skills: '',
     experiences: [
       { jobTitle: '', company: '', startDate: '', endDate: '', responsibilities: '' }
+    ],
+    projects: [
+      { title: '', techStack: '', description: '' }
+    ],
+    certifications: [
+      { name: '', issuer: '', year: '' }
     ],
     degree: "Bachelor's Degree",
     fieldOfStudy: '',
@@ -83,6 +88,46 @@ export default function ResumeBuilder({ onResumeCreated }) {
     }));
   };
 
+  const handleProjectChange = (index, field, value) => {
+    const updated = [...formData.projects];
+    updated[index][field] = value;
+    setFormData(prev => ({ ...prev, projects: updated }));
+  };
+
+  const addProject = () => {
+    setFormData(prev => ({
+      ...prev,
+      projects: [...prev.projects, { title: '', techStack: '', description: '' }]
+    }));
+  };
+
+  const removeProject = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      projects: prev.projects.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleCertChange = (index, field, value) => {
+    const updated = [...formData.certifications];
+    updated[index][field] = value;
+    setFormData(prev => ({ ...prev, certifications: updated }));
+  };
+
+  const addCertification = () => {
+    setFormData(prev => ({
+      ...prev,
+      certifications: [...prev.certifications, { name: '', issuer: '', year: '' }]
+    }));
+  };
+
+  const removeCertification = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      certifications: prev.certifications.filter((_, i) => i !== index)
+    }));
+  };
+
   // Comprehensive Form Validation
   const validateForm = () => {
     const newErrors = {};
@@ -92,7 +137,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
       newErrors.fullName = 'Full Name is required (minimum 2 characters).';
     }
 
-    // 2. Email Validation (Must contain @ and valid domain like .com, .in, etc.)
+    // 2. Email Validation
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!formData.email.trim()) {
       newErrors.email = 'Email Address is required.';
@@ -100,7 +145,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
       newErrors.email = 'Please enter a valid email address containing "@" and ".com" (e.g. user@gmail.com).';
     }
 
-    // 3. Indian Phone Number Validation (+91 followed by 10 digits or 10-digit mobile number)
+    // 3. Indian Phone Number Validation
     const indianPhoneRegex = /^(\+91[\s\-]?)?[6-9]\d{9}$/;
     const rawPhone = formData.phone.trim();
     if (!rawPhone) {
@@ -114,12 +159,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
       newErrors.location = 'City, State / Country is required (e.g. Chennai, Tamilnadu).';
     }
 
-    // 5. Core Skills
-    if (!formData.skills.trim()) {
-      newErrors.skills = 'Core Skills are required to pass ATS evaluation.';
-    }
-
-    // 6. Work Experience Validation (Only if Experienced)
+    // 5. Work Experience Validation (Only if Experienced)
     if (experienceStatus === 'experienced') {
       if (!formData.experiences || formData.experiences.length === 0) {
         newErrors.experiences = 'Please add at least one work experience or switch status to "Fresher".';
@@ -137,7 +177,6 @@ export default function ResumeBuilder({ onResumeCreated }) {
 
   const completeResume = () => {
     if (!validateForm()) {
-      // Scroll to top of form to see errors
       window.scrollTo({ top: 150, behavior: 'smooth' });
       return;
     }
@@ -337,10 +376,10 @@ export default function ResumeBuilder({ onResumeCreated }) {
               </div>
             </div>
 
-            {/* Section 2: Summary & Skills */}
+            {/* Section 2: Summary */}
             <div style={{ marginBottom: '2rem' }}>
               <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
-                <Award size={18} /> Professional Summary & Core Skills
+                <User size={18} /> Professional Summary
               </h3>
               <div className="form-group">
                 <label className="form-label">Professional Summary (2–4 sentences)</label>
@@ -351,27 +390,15 @@ export default function ResumeBuilder({ onResumeCreated }) {
                   onChange={e => handleInputChange('summary', e.target.value)} 
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">Core Skills (Comma separated) *</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  style={errors.skills ? { borderColor: 'var(--accent-danger)' } : {}}
-                  placeholder="e.g. JavaScript, Python, React, SQL, Problem Solving"
-                  value={formData.skills} 
-                  onChange={e => handleInputChange('skills', e.target.value)} 
-                />
-                {errors.skills && <span style={{ color: 'var(--accent-danger)', fontSize: '0.8rem' }}>{errors.skills}</span>}
-              </div>
             </div>
 
-            {/* Section 3: Job-Specific Tailored Questions */}
+            {/* Section 3: Job-Specific Technical Skills */}
             <div style={{ marginBottom: '2rem', padding: '1.25rem', background: 'rgba(99, 102, 241, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
               <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
-                <Sparkles size={18} /> Job-Specific Questions for: {jobTitle}
+                <Sparkles size={18} /> Technical & Role Skills for: {jobTitle}
               </h3>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                These tailored inputs help embed relevant keywords to pass ATS filters for this role.
+                These tailored skill categories help embed relevant keywords to pass ATS filters for this role.
               </p>
 
               {extraQuestions.map((q) => (
@@ -399,7 +426,156 @@ export default function ResumeBuilder({ onResumeCreated }) {
               ))}
             </div>
 
-            {/* Section 4: Work Experience with Fresher vs Experienced Dropdown */}
+            {/* Section 4: Key Projects (Structured with Add/Delete) */}
+            <div style={{ marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <FolderGit2 size={18} /> Key Projects
+                </h3>
+                <button className="btn btn-secondary btn-sm" onClick={addProject}>
+                  <Plus size={16} /> Add Project
+                </button>
+              </div>
+
+              {formData.projects.map((proj, idx) => (
+                <div key={idx} style={{
+                  padding: '1.25rem',
+                  background: 'var(--bg-surface)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-color)',
+                  marginBottom: '1rem',
+                  position: 'relative'
+                }}>
+                  {formData.projects.length > 1 && (
+                    <button
+                      onClick={() => removeProject(idx)}
+                      style={{
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent-danger)',
+                        cursor: 'pointer'
+                      }}
+                      title="Remove project"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                  <h4 style={{ fontSize: '0.95rem', marginBottom: '0.85rem' }}>Project #{idx + 1}</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '0.75rem' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Project Title</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="e.g. Smart Voice-Controlled Mirror" 
+                        value={proj.title} 
+                        onChange={e => handleProjectChange(idx, 'title', e.target.value)} 
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Technologies Used</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="e.g. Raspberry Pi 4, Python, Node.js" 
+                        value={proj.techStack} 
+                        onChange={e => handleProjectChange(idx, 'techStack', e.target.value)} 
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Project Description & Outcomes</label>
+                    <textarea
+                      className="form-textarea"
+                      placeholder="• Converted two-way glass into interactive display with voice control&#10;• Integrated real-time dashboard widgets for news and weather"
+                      value={proj.description}
+                      onChange={e => handleProjectChange(idx, 'description', e.target.value)}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Section 5: Certifications & Achievements (Optional) */}
+            <div style={{ marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Award size={18} /> Certifications & Achievements <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Optional)</span>
+                </h3>
+                <button className="btn btn-secondary btn-sm" onClick={addCertification}>
+                  <Plus size={16} /> Add Certification
+                </button>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                Add relevant certifications, licenses, or professional achievements. Leave blank if not applicable.
+              </p>
+
+              {formData.certifications.map((cert, idx) => (
+                <div key={idx} style={{
+                  padding: '1rem',
+                  background: 'var(--bg-surface)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-color)',
+                  marginBottom: '0.75rem',
+                  position: 'relative'
+                }}>
+                  {formData.certifications.length > 1 && (
+                    <button
+                      onClick={() => removeCertification(idx)}
+                      style={{
+                        position: 'absolute',
+                        top: '0.8rem',
+                        right: '0.8rem',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent-danger)',
+                        cursor: 'pointer'
+                      }}
+                      title="Remove certification"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Certification Name</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="e.g. AWS Certified Solutions Architect" 
+                        value={cert.name} 
+                        onChange={e => handleCertChange(idx, 'name', e.target.value)} 
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Issuer / Organization</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="e.g. Amazon Web Services" 
+                        value={cert.issuer} 
+                        onChange={e => handleCertChange(idx, 'issuer', e.target.value)} 
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Year / Date</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="e.g. 2024" 
+                        value={cert.year} 
+                        onChange={e => handleCertChange(idx, 'year', e.target.value)} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Section 6: Work Experience with Fresher vs Experienced Dropdown */}
             <div style={{ marginBottom: '2rem' }}>
               <div style={{ padding: '1rem', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', border: '1px solid var(--border-color)' }}>
                 <label className="form-label" style={{ fontSize: '1rem', color: 'var(--accent-primary)', marginBottom: '0.5rem' }}>
@@ -500,7 +676,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
               )}
             </div>
 
-            {/* Section 5: Education with Tamilnadu Placeholders */}
+            {/* Section 7: Education */}
             <div style={{ marginBottom: '2rem' }}>
               <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
                 <GraduationCap size={18} /> Education
