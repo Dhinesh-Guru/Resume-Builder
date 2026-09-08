@@ -530,3 +530,18 @@ a:hover {
     font-size: 1.15rem !important;
   }
 }
+
+/* Ensure ATS resume preview text & headers remain crisp dark regardless of global app dark theme */
+#ats-resume-preview-document,
+#ats-resume-preview-document * {
+  color: #111827;
+}
+
+#ats-resume-preview-document h1,
+#ats-resume-preview-document h2,
+#ats-resume-preview-document h3,
+#ats-resume-preview-document h4,
+#ats-resume-preview-document h5,
+#ats-resume-preview-document h6 {
+  color: #111827 !important;
+}

@@ -136,7 +136,7 @@ export default function ResumePreview({ data }) {
 
           {otherSkills && otherSkills.trim() && (
             <div style={{ marginBottom: '0.3rem', fontSize: '9.5pt' }}>
-              <strong style={{ color: '#111827', fontWeight: 700 }}>Other Technical & Soft Skills:</strong>{' '}
+              <strong style={{ color: '#111827', fontWeight: 700 }}>Additional Tools & Software:</strong>{' '}
               <span style={{ color: '#374151' }}>{otherSkills}</span>
             </div>
           )}

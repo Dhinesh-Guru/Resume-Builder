@@ -445,20 +445,20 @@ export default function ResumeBuilder({ onResumeCreated }) {
                 </div>
               ))}
 
-              {/* Optional Other Technical & Soft Skills Field */}
+              {/* Optional Additional Tools & Software Field */}
               <div className="form-group" style={{ marginTop: '1rem', borderTop: '1px dashed rgba(99, 102, 241, 0.3)', paddingTop: '1rem' }}>
                 <label className="form-label">
-                  Other Technical / Soft Skills <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Optional)</span>
+                  Additional Tools & Software <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Optional)</span>
                 </label>
                 <input 
                   type="text" 
                   className="form-input" 
-                  placeholder="e.g. Problem Solving, Agile/Scrum, Version Control, Communication, OS Troubleshooting" 
+                  placeholder="e.g. Blender, Figma, Adobe Photoshop, Unity, AutoCAD, 3D Modeling" 
                   value={formData.otherSkills} 
                   onChange={e => handleInputChange('otherSkills', e.target.value)} 
                 />
                 <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'block', marginTop: '0.3rem' }}>
-                  Enter any additional technical or professional skills that aren't programming languages or specific frameworks.
+                  Enter any additional software, design tools, or 3D modeling packages you use (e.g. Blender, Figma) that aren't programming languages.
                 </small>
               </div>
             </div>
