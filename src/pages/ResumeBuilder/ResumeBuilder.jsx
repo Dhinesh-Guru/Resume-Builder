@@ -36,7 +36,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
       { name: '', issuer: '', year: '' }
     ],
     educations: [
-      { degree: "Bachelor's Degree", fieldOfStudy: '', university: '', gradYear: '' }
+      { degree: "Bachelor's Degree", fieldOfStudy: '', university: '', gradYear: '', score: '' }
     ],
     extraAnswers: {}
   });
@@ -137,7 +137,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
   const addEducation = () => {
     setFormData(prev => ({
       ...prev,
-      educations: [...prev.educations, { degree: "Bachelor's Degree", fieldOfStudy: '', university: '', gradYear: '' }]
+      educations: [...prev.educations, { degree: "Bachelor's Degree", fieldOfStudy: '', university: '', gradYear: '', score: '' }]
     }));
   };
 
@@ -751,7 +751,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
                     </button>
                   )}
                   <h4 style={{ fontSize: '0.95rem', marginBottom: '0.85rem' }}>Education #{idx + 1}</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                     <div className="form-group">
                       <label className="form-label">Degree / Certificate</label>
                       <select 
@@ -784,19 +784,29 @@ export default function ResumeBuilder({ onResumeCreated }) {
                       <input 
                         type="text" 
                         className="form-input" 
-                        placeholder="e.g. Anna University / Govt Higher Secondary School" 
+                        placeholder="e.g. Anna University / Govt High School" 
                         value={edu.university} 
                         onChange={e => handleEducationChange(idx, 'university', e.target.value)} 
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Graduation Year / Passing Year</label>
+                      <label className="form-label">Graduation / Passing Year</label>
                       <input 
                         type="text" 
                         className="form-input" 
                         placeholder="e.g. 2024" 
                         value={edu.gradYear} 
                         onChange={e => handleEducationChange(idx, 'gradYear', e.target.value)} 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Percentage / CGPA <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Optional)</span></label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="e.g. 8.5 CGPA or 85%" 
+                        value={edu.score || ''} 
+                        onChange={e => handleEducationChange(idx, 'score', e.target.value)} 
                       />
                     </div>
                   </div>

@@ -106,7 +106,7 @@ export function exportResumeToTxt(resumeData, filename = 'ATS_Resume.txt') {
   if (educations.length > 0) {
     txt += `EDUCATION\n---------\n`;
     educations.forEach(edu => {
-      txt += `${edu.degree || ''}${edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ''}\n`;
+      txt += `${edu.degree || ''}${edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ''}${edu.score ? ` (${edu.score})` : ''}\n`;
       if (edu.university || edu.gradYear) {
         txt += `${edu.university || ''} (${edu.gradYear || ''})\n`;
       }

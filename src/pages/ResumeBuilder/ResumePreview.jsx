@@ -239,9 +239,12 @@ export default function ResumePreview({ data }) {
             EDUCATION
           </h2>
           {validEducations.map((edu, idx) => (
-            <div key={idx} style={{ marginBottom: '0.4rem' }}>
+            <div key={idx} style={{ marginBottom: '0.45rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontWeight: 700, color: '#111827', fontSize: '10pt' }}>
-                <span>{edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}</span>
+                <span>
+                  {edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}
+                  {edu.score && <span style={{ fontWeight: 600, color: '#374151', fontSize: '9pt' }}> — {edu.score}</span>}
+                </span>
                 {edu.gradYear && <span style={{ fontSize: '9pt', color: '#4b5563', fontWeight: 600 }}>{edu.gradYear}</span>}
               </div>
               {edu.university && <div style={{ color: '#4b5563', fontSize: '9.5pt', marginTop: '0.05rem' }}>{edu.university}</div>}
