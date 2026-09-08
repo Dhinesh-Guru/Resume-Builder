@@ -46,12 +46,17 @@ export function exportResumeToTxt(resumeData, filename = 'ATS_Resume.txt') {
     txt += `PROFESSIONAL SUMMARY\n--------------------\n${resumeData.summary}\n\n`;
   }
 
-  if (resumeData.extraAnswers && Object.keys(resumeData.extraAnswers).length > 0) {
+  if ((resumeData.extraAnswers && Object.keys(resumeData.extraAnswers).length > 0) || resumeData.otherSkills) {
     txt += `TECHNICAL SKILLS\n----------------\n`;
-    for (const [key, value] of Object.entries(resumeData.extraAnswers)) {
-      if (value) {
-        txt += `${key.toUpperCase()}: ${value}\n`;
+    if (resumeData.extraAnswers) {
+      for (const [key, value] of Object.entries(resumeData.extraAnswers)) {
+        if (value) {
+          txt += `${key.toUpperCase()}: ${value}\n`;
+        }
       }
+    }
+    if (resumeData.otherSkills) {
+      txt += `OTHER SKILLS: ${resumeData.otherSkills}\n`;
     }
     txt += `\n`;
   } else if (resumeData.skills) {
@@ -94,10 +99,19 @@ export function exportResumeToTxt(resumeData, filename = 'ATS_Resume.txt') {
     }
   }
 
-  if (resumeData.degree || resumeData.university) {
+  const educations = resumeData.educations && resumeData.educations.length > 0 
+    ? resumeData.educations 
+    : (resumeData.degree || resumeData.university ? [{ degree: resumeData.degree, fieldOfStudy: resumeData.fieldOfStudy, university: resumeData.university, gradYear: resumeData.gradYear }] : []);
+
+  if (educations.length > 0) {
     txt += `EDUCATION\n---------\n`;
-    txt += `${resumeData.degree || ''} ${resumeData.fieldOfStudy ? `in ${resumeData.fieldOfStudy}` : ''}\n`;
-    txt += `${resumeData.university || ''} (${resumeData.gradYear || ''})\n\n`;
+    educations.forEach(edu => {
+      txt += `${edu.degree || ''}${edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ''}\n`;
+      if (edu.university || edu.gradYear) {
+        txt += `${edu.university || ''} (${edu.gradYear || ''})\n`;
+      }
+      txt += `\n`;
+    });
   }
 
   const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });

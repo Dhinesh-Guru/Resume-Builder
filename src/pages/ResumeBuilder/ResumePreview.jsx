@@ -46,9 +46,11 @@ export default function ResumePreview({ data }) {
     jobTitle = 'Target Role Title',
     summary = '',
     skills = '',
+    otherSkills = '',
     experiences = [],
     projects = [],
     certifications = [],
+    educations = [],
     degree = '',
     fieldOfStudy = '',
     university = '',
@@ -61,6 +63,11 @@ export default function ResumePreview({ data }) {
   const validProjects = Array.isArray(projects) ? projects.filter(p => p.title?.trim() || p.description?.trim()) : [];
   const validCerts = Array.isArray(certifications) ? certifications.filter(c => c.name?.trim()) : [];
   const validExperiences = Array.isArray(experiences) ? experiences.filter(e => e.jobTitle?.trim() || e.company?.trim()) : [];
+
+  // Support both array educations and fallback single degree fields
+  const validEducations = Array.isArray(educations) && educations.length > 0
+    ? educations.filter(e => e.degree?.trim() || e.university?.trim())
+    : (degree || university ? [{ degree, fieldOfStudy, university, gradYear }] : []);
 
   return (
     <div 
@@ -111,12 +118,12 @@ export default function ResumePreview({ data }) {
       )}
 
       {/* Technical Skills & Competencies */}
-      {(hasExtraSkills || skills) && (
+      {(hasExtraSkills || skills || otherSkills) && (
         <div style={{ marginBottom: '1.25rem' }}>
           <h2 style={{ fontSize: '11pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.25rem', marginBottom: '0.5rem', color: '#111827' }}>
             TECHNICAL SKILLS
           </h2>
-          {hasExtraSkills ? (
+          {hasExtraSkills && (
             Object.entries(extraAnswers).map(([key, val]) => val && val.trim() ? (
               <div key={key} style={{ marginBottom: '0.3rem', fontSize: '9.5pt' }}>
                 <strong style={{ color: '#111827', fontWeight: 700 }}>
@@ -125,12 +132,19 @@ export default function ResumePreview({ data }) {
                 <span style={{ color: '#374151' }}>{val}</span>
               </div>
             ) : null)
-          ) : (
-            skills && (
-              <div style={{ fontSize: '9.5pt', color: '#374151' }}>
-                <strong style={{ color: '#111827', fontWeight: 700 }}>Core Skills:</strong> {skills}
-              </div>
-            )
+          )}
+
+          {otherSkills && otherSkills.trim() && (
+            <div style={{ marginBottom: '0.3rem', fontSize: '9.5pt' }}>
+              <strong style={{ color: '#111827', fontWeight: 700 }}>Other Technical & Soft Skills:</strong>{' '}
+              <span style={{ color: '#374151' }}>{otherSkills}</span>
+            </div>
+          )}
+
+          {!hasExtraSkills && skills && (
+            <div style={{ fontSize: '9.5pt', color: '#374151' }}>
+              <strong style={{ color: '#111827', fontWeight: 700 }}>Core Skills:</strong> {skills}
+            </div>
           )}
         </div>
       )}
@@ -218,17 +232,21 @@ export default function ResumePreview({ data }) {
         </div>
       )}
 
-      {/* Education */}
-      {(degree || university) && (
+      {/* Education Qualifications */}
+      {validEducations.length > 0 && (
         <div style={{ marginBottom: '1rem' }}>
           <h2 style={{ fontSize: '11pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.25rem', marginBottom: '0.4rem', color: '#111827' }}>
             EDUCATION
           </h2>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontWeight: 700, color: '#111827', fontSize: '10pt' }}>
-            <span>{degree} {fieldOfStudy ? `in ${fieldOfStudy}` : ''}</span>
-            {gradYear && <span style={{ fontSize: '9pt', color: '#4b5563', fontWeight: 600 }}>{gradYear}</span>}
-          </div>
-          {university && <div style={{ color: '#4b5563', fontSize: '9.5pt', marginTop: '0.1rem' }}>{university}</div>}
+          {validEducations.map((edu, idx) => (
+            <div key={idx} style={{ marginBottom: '0.4rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontWeight: 700, color: '#111827', fontSize: '10pt' }}>
+                <span>{edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}</span>
+                {edu.gradYear && <span style={{ fontSize: '9pt', color: '#4b5563', fontWeight: 600 }}>{edu.gradYear}</span>}
+              </div>
+              {edu.university && <div style={{ color: '#4b5563', fontSize: '9.5pt', marginTop: '0.05rem' }}>{edu.university}</div>}
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -25,6 +25,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
     linkedin: '',
     github: '',
     summary: '',
+    otherSkills: '',
     experiences: [
       { jobTitle: '', company: '', startDate: '', endDate: '', responsibilities: '' }
     ],
@@ -34,10 +35,9 @@ export default function ResumeBuilder({ onResumeCreated }) {
     certifications: [
       { name: '', issuer: '', year: '' }
     ],
-    degree: "Bachelor's Degree",
-    fieldOfStudy: '',
-    university: '',
-    gradYear: '',
+    educations: [
+      { degree: "Bachelor's Degree", fieldOfStudy: '', university: '', gradYear: '' }
+    ],
     extraAnswers: {}
   });
 
@@ -125,6 +125,26 @@ export default function ResumeBuilder({ onResumeCreated }) {
     setFormData(prev => ({
       ...prev,
       certifications: prev.certifications.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleEducationChange = (index, field, value) => {
+    const updated = [...formData.educations];
+    updated[index][field] = value;
+    setFormData(prev => ({ ...prev, educations: updated }));
+  };
+
+  const addEducation = () => {
+    setFormData(prev => ({
+      ...prev,
+      educations: [...prev.educations, { degree: "Bachelor's Degree", fieldOfStudy: '', university: '', gradYear: '' }]
+    }));
+  };
+
+  const removeEducation = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      educations: prev.educations.filter((_, i) => i !== index)
     }));
   };
 
@@ -392,7 +412,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
               </div>
             </div>
 
-            {/* Section 3: Job-Specific Technical Skills */}
+            {/* Section 3: Job-Specific Technical Skills + Optional Other Skills */}
             <div style={{ marginBottom: '2rem', padding: '1.25rem', background: 'rgba(99, 102, 241, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
               <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
                 <Sparkles size={18} /> Technical & Role Skills for: {jobTitle}
@@ -424,6 +444,23 @@ export default function ResumeBuilder({ onResumeCreated }) {
                   )}
                 </div>
               ))}
+
+              {/* Optional Other Technical & Soft Skills Field */}
+              <div className="form-group" style={{ marginTop: '1rem', borderTop: '1px dashed rgba(99, 102, 241, 0.3)', paddingTop: '1rem' }}>
+                <label className="form-label">
+                  Other Technical / Soft Skills <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Optional)</span>
+                </label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="e.g. Problem Solving, Agile/Scrum, Version Control, Communication, OS Troubleshooting" 
+                  value={formData.otherSkills} 
+                  onChange={e => handleInputChange('otherSkills', e.target.value)} 
+                />
+                <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'block', marginTop: '0.3rem' }}>
+                  Enter any additional technical or professional skills that aren't programming languages or specific frameworks.
+                </small>
+              </div>
             </div>
 
             {/* Section 4: Key Projects (Structured with Add/Delete) */}
@@ -676,36 +713,95 @@ export default function ResumeBuilder({ onResumeCreated }) {
               )}
             </div>
 
-            {/* Section 7: Education */}
+            {/* Section 7: Multiple Education Qualifications */}
             <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
-                <GraduationCap size={18} /> Education
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                <div className="form-group">
-                  <label className="form-label">Degree</label>
-                  <select className="form-select" value={formData.degree} onChange={e => handleInputChange('degree', e.target.value)}>
-                    <option value="Bachelor's Degree">Bachelor's Degree</option>
-                    <option value="Master's Degree">Master's Degree</option>
-                    <option value="Associate Degree">Associate Degree</option>
-                    <option value="Doctorate / PhD">Doctorate / PhD</option>
-                    <option value="High School Diploma">High School Diploma</option>
-                    <option value="Other Certification">Other Certification</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Field of Study</label>
-                  <input type="text" className="form-input" placeholder="Computer Science" value={formData.fieldOfStudy} onChange={e => handleInputChange('fieldOfStudy', e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">University / Institution</label>
-                  <input type="text" className="form-input" placeholder="Anna University" value={formData.university} onChange={e => handleInputChange('university', e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Graduation Year</label>
-                  <input type="text" className="form-input" placeholder="2024" value={formData.gradYear} onChange={e => handleInputChange('gradYear', e.target.value)} />
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <GraduationCap size={18} /> Education Qualifications
+                </h3>
+                <button className="btn btn-secondary btn-sm" onClick={addEducation}>
+                  <Plus size={16} /> Add Education
+                </button>
               </div>
+
+              {formData.educations.map((edu, idx) => (
+                <div key={idx} style={{
+                  padding: '1.25rem',
+                  background: 'var(--bg-surface)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-color)',
+                  marginBottom: '1rem',
+                  position: 'relative'
+                }}>
+                  {formData.educations.length > 1 && (
+                    <button
+                      onClick={() => removeEducation(idx)}
+                      style={{
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent-danger)',
+                        cursor: 'pointer'
+                      }}
+                      title="Remove education qualification"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                  <h4 style={{ fontSize: '0.95rem', marginBottom: '0.85rem' }}>Education #{idx + 1}</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">Degree / Certificate</label>
+                      <select 
+                        className="form-select" 
+                        value={edu.degree} 
+                        onChange={e => handleEducationChange(idx, 'degree', e.target.value)}
+                      >
+                        <option value="Bachelor's Degree">Bachelor's Degree (B.E / B.Tech / B.Sc / B.Com)</option>
+                        <option value="Master's Degree">Master's Degree (M.E / M.Tech / M.Sc / MCA)</option>
+                        <option value="Diploma">Diploma (Polytechnic / ITI)</option>
+                        <option value="HSC / 12th Grade">HSC / 12th Grade (Higher Secondary)</option>
+                        <option value="SSLC / 10th Grade">SSLC / 10th Grade (Secondary School)</option>
+                        <option value="Associate Degree">Associate Degree</option>
+                        <option value="Doctorate / PhD">Doctorate / PhD</option>
+                        <option value="Other Qualification">Other Qualification</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Field of Study / Major</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="e.g. Computer Science / Bio-Maths" 
+                        value={edu.fieldOfStudy} 
+                        onChange={e => handleEducationChange(idx, 'fieldOfStudy', e.target.value)} 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">University / Institution / School</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="e.g. Anna University / Govt Higher Secondary School" 
+                        value={edu.university} 
+                        onChange={e => handleEducationChange(idx, 'university', e.target.value)} 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Graduation Year / Passing Year</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="e.g. 2024" 
+                        value={edu.gradYear} 
+                        onChange={e => handleEducationChange(idx, 'gradYear', e.target.value)} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Action Buttons */}
