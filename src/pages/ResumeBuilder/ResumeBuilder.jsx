@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { 
   User, Briefcase, GraduationCap, Award, FileDown, Plus, Trash2, 
   ArrowRight, ArrowLeft, CheckCircle, Sparkles, AlertCircle, UserCheck, FolderGit2,
-  Layers
+  Layers, Upload, FileText
 } from 'lucide-react';
 import JobTitleSelector from '../../components/JobTitleSelector';
 import ResumePreview from './ResumePreview';
 import { JOB_SPECIFIC_QUESTIONS, DEFAULT_EXTRA_QUESTIONS } from './questions';
 import { exportResumeToPdf, exportResumeToTxt } from '../../utils/resumeExport';
+import { extractTextFromFile } from '../../utils/fileParsers';
+import { parseResumeTextToFormData } from '../../utils/resumeParser';
 
 export default function ResumeBuilder({ onResumeCreated }) {
   const [step, setStep] = useState(1); // 1: Job Title, 2: Form, 3: Preview & Download
@@ -21,6 +23,10 @@ export default function ResumeBuilder({ onResumeCreated }) {
   const [allowTwoPages, setAllowTwoPages] = useState(false);
   const [showOverflowModal, setShowOverflowModal] = useState(false);
   const [editorNotice, setEditorNotice] = useState('');
+
+  // Upload & Parsing State
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [uploadSuccessMsg, setUploadSuccessMsg] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -50,6 +56,49 @@ export default function ResumeBuilder({ onResumeCreated }) {
   // Validation Errors State
   const [errors, setErrors] = useState({});
   const [downloading, setDownloading] = useState(false);
+
+  // Upload and Auto-Fill Existing Resume File (PDF / DOCX / TXT)
+  const handleResumeFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingResume(true);
+    setUploadSuccessMsg('');
+
+    try {
+      const text = await extractTextFromFile(file);
+      const parsed = parseResumeTextToFormData(text);
+
+      if (parsed) {
+        setFormData(prev => ({
+          ...prev,
+          fullName: parsed.fullName || prev.fullName,
+          email: parsed.email || prev.email,
+          phone: parsed.phone || prev.phone,
+          location: parsed.location || prev.location,
+          linkedin: parsed.linkedin || prev.linkedin,
+          github: parsed.github || prev.github,
+          summary: parsed.summary || prev.summary,
+          otherSkills: parsed.otherSkills || prev.otherSkills,
+          projects: parsed.projects?.length > 0 ? parsed.projects : prev.projects,
+          experiences: parsed.experiences?.length > 0 ? parsed.experiences : prev.experiences,
+          certifications: parsed.certifications?.length > 0 ? parsed.certifications : prev.certifications,
+          educations: parsed.educations?.length > 0 ? parsed.educations : prev.educations
+        }));
+
+        setUploadSuccessMsg(`🎉 Successfully extracted details from "${file.name}"! All fields are pre-filled below for you to edit.`);
+        if (!jobTitle) {
+          setJobTitle('Software Developer / Engineer');
+        }
+        setStep(2);
+      }
+    } catch (err) {
+      alert('Could not parse resume file: ' + err.message);
+    } finally {
+      setUploadingResume(false);
+      event.target.value = '';
+    }
+  };
 
   const handleJobTitleSelect = (title, roleId) => {
     setJobTitle(title);
@@ -241,7 +290,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
           ATS-Friendly <span className="gradient-text">Resume Builder</span>
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '1rem', maxWidth: '600px', margin: '0 auto' }}>
-          Create an optimized resume engineered to pass ATS filters and stand out to hiring managers.
+          Create or edit an optimized resume engineered to pass ATS filters and stand out to hiring managers.
         </p>
 
         {/* Step Tabs */}
@@ -255,11 +304,11 @@ export default function ResumeBuilder({ onResumeCreated }) {
           border: '1px solid var(--border-color)'
         }}>
           <span style={{ color: step >= 1 ? 'var(--accent-primary)' : 'var(--text-muted)', fontWeight: 600, fontSize: '0.85rem' }}>
-            1. Target Job Title
+            1. Target Job Title / Upload
           </span>
           <span>→</span>
           <span style={{ color: step >= 2 ? 'var(--accent-primary)' : 'var(--text-muted)', fontWeight: 600, fontSize: '0.85rem' }}>
-            2. Enter Details
+            2. Enter / Edit Details
           </span>
           <span>→</span>
           <span style={{ color: step >= 3 ? 'var(--accent-primary)' : 'var(--text-muted)', fontWeight: 600, fontSize: '0.85rem' }}>
@@ -268,30 +317,94 @@ export default function ResumeBuilder({ onResumeCreated }) {
         </div>
       </div>
 
-      {/* STEP 1: Select Job Title */}
+      {/* STEP 1: Select Job Title or Upload Existing Resume */}
       {step === 1 && (
-        <div className="glass-card">
-          <JobTitleSelector 
-            selectedTitle={jobTitle}
-            onSelectTitle={handleJobTitleSelect}
-            titlePrompt="Step 1: Select your target job title for customized questions"
-          />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Upload Existing Resume Box */}
+          <div className="glass-card" style={{
+            background: 'rgba(99, 102, 241, 0.08)',
+            border: '2px dashed var(--accent-primary)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            textAlign: 'center'
+          }}>
+            <h3 style={{ fontSize: '1.25rem', color: 'var(--accent-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <Upload size={24} /> Edit an Existing Resume (PDF / DOCX / TXT)
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '650px', margin: '0 auto 1.25rem auto' }}>
+              Don't want to enter your details from scratch? Upload your existing resume file to automatically extract your contact details, experience, projects, education, and skills!
+            </p>
+            <label className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', padding: '0.75rem 1.5rem', fontSize: '1rem', cursor: 'pointer' }}>
+              <FileText size={20} /> {uploadingResume ? 'Parsing Resume Details...' : 'Upload & Edit Existing Resume File'}
+              <input 
+                type="file" 
+                accept=".pdf,.docx,.txt" 
+                onChange={handleResumeFileUpload} 
+                disabled={uploadingResume}
+                style={{ display: 'none' }} 
+              />
+            </label>
+          </div>
+
+          <div className="glass-card">
+            <JobTitleSelector 
+              selectedTitle={jobTitle}
+              onSelectTitle={handleJobTitleSelect}
+              titlePrompt="Or select your target job title to build a new resume from scratch:"
+            />
+          </div>
         </div>
       )}
 
-      {/* STEP 2: Fill Details */}
+      {/* STEP 2: Fill / Edit Details */}
       {step === 2 && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
           <div className="glass-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <h2 style={{ fontSize: '1.4rem' }}>Resume Details for: <span className="gradient-text">{jobTitle}</span></h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Fill in your info. Required fields are marked with *.</p>
+                <h2 style={{ fontSize: '1.4rem' }}>Resume Details for: <span className="gradient-text">{jobTitle || 'Target Role'}</span></h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Edit any details below. Required fields are marked with *.</p>
               </div>
-              <button className="btn btn-secondary btn-sm" onClick={() => setStep(1)}>
-                Change Job Title
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <label className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+                  <Upload size={14} /> Import/Upload Different Resume PDF
+                  <input 
+                    type="file" 
+                    accept=".pdf,.docx,.txt" 
+                    onChange={handleResumeFileUpload} 
+                    disabled={uploadingResume}
+                    style={{ display: 'none' }} 
+                  />
+                </label>
+                <button className="btn btn-secondary btn-sm" onClick={() => setStep(1)}>
+                  Change Job Title
+                </button>
+              </div>
             </div>
+
+            {/* Upload Success Banner */}
+            {uploadSuccessMsg && (
+              <div style={{
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid var(--accent-success)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '1rem',
+                marginBottom: '1.5rem',
+                color: 'var(--accent-success)',
+                fontSize: '0.9rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>{uploadSuccessMsg}</div>
+                <button 
+                  onClick={() => setUploadSuccessMsg('')} 
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-success)', fontWeight: 700, cursor: 'pointer', fontSize: '1rem' }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
 
             {/* Helper Notice Banner when redirected to trim content */}
             {editorNotice && (
@@ -435,7 +548,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
                 <label className="form-label">Professional Summary (2–4 sentences)</label>
                 <textarea 
                   className="form-textarea" 
-                  placeholder={`Enthusiastic ${jobTitle} based in Chennai, Tamilnadu skilled in software development, problem solving, and modern frameworks...`}
+                  placeholder={`Enthusiastic ${jobTitle || 'Developer'} based in Chennai, Tamilnadu skilled in software development, problem solving, and modern frameworks...`}
                   value={formData.summary} 
                   onChange={e => handleInputChange('summary', e.target.value)} 
                 />
@@ -445,7 +558,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
             {/* Section 3: Job-Specific Technical Skills + Optional Other Skills */}
             <div style={{ marginBottom: '2rem', padding: '1.25rem', background: 'rgba(99, 102, 241, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
               <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
-                <Sparkles size={18} /> Technical & Role Skills for: {jobTitle}
+                <Sparkles size={18} /> Technical & Role Skills for: {jobTitle || 'Target Role'}
               </h3>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                 These tailored skill categories help embed relevant keywords to pass ATS filters for this role.
