@@ -58,7 +58,7 @@ export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', 
  */
 /**
  * Generates 100% True Vector Native Text PDF using jsPDF.
- * Text is 100% selectable, copyable, crisp, beautifully aligned, and ATS compliant.
+ * Dynamically balances font sizes, line heights, and section gaps to fill 90-95% of A4 page cleanly.
  */
 export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', allowTwoPages = false) {
   const pdf = new jsPDF('p', 'mm', 'a4');
@@ -79,34 +79,72 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
     console.warn('Failed to embed PDF metadata:', e);
   }
 
-  let baseFs = 9;
-  let lineH = 4.2;
-  let headerFs = 10;
-  let y = 14;
+  // 1. Calculate content volume to dynamically pick font scale & vertical spacing
+  const summaryLen = (resumeData.summary || '').length;
+  const expCount = (resumeData.experiences || []).filter(e => e.jobTitle || e.company).length;
+  const expBullets = (resumeData.experiences || []).reduce((acc, e) => acc + (e.responsibilities ? e.responsibilities.split('\n').length : 0), 0);
+  const projCount = (resumeData.projects || []).filter(p => p.title || p.description).length;
+  const projBullets = (resumeData.projects || []).reduce((acc, p) => acc + (p.description ? p.description.split('\n').length : 0), 0);
+  const eduCount = (resumeData.educations || []).filter(ed => ed.degree || ed.university).length || 1;
+  const certCount = (resumeData.certifications || []).filter(c => c.name).length;
+  const skillCount = Object.keys(resumeData.extraAnswers || {}).length + (resumeData.otherSkills ? 1 : 0);
+
+  const totalUnits = (summaryLen / 100) + (expCount * 2) + (expBullets * 1.2) + (projCount * 2) + (projBullets * 1.2) + (eduCount * 1.8) + (certCount * 1.2) + (skillCount * 1.2);
+
+  // Dynamic layout proportions based on content volume
+  let baseFs = 10;
+  let lineH = 5.0;
+  let headerFs = 11;
+  let nameFs = 18;
+  let titleFs = 11;
+  let sectionGap = 5.5;
+  let itemGap = 3.5;
+
+  if (totalUnits > 28) {
+    // Dense content: Compact font & line spacing to fit 1 page
+    baseFs = 9;
+    lineH = 4.3;
+    headerFs = 10;
+    nameFs = 16;
+    titleFs = 10;
+    sectionGap = 4.0;
+    itemGap = 2.5;
+  } else if (totalUnits < 16) {
+    // Light content: Generous font & line spacing to fill page comfortably
+    baseFs = 10.5;
+    lineH = 5.4;
+    headerFs = 11.5;
+    nameFs = 19;
+    titleFs = 11.5;
+    sectionGap = 6.5;
+    itemGap = 4.5;
+  }
+
+  let y = 15;
 
   const checkPageBreak = (neededHeight) => {
-    if (y + neededHeight > pdfHeight - 12) {
+    if (y + neededHeight > pdfHeight - 14) {
       if (allowTwoPages) {
         pdf.addPage();
-        y = 14;
+        y = 15;
       }
     }
   };
 
   // 1. Header Name
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(16);
+  pdf.setFontSize(nameFs);
   pdf.setTextColor(17, 24, 39);
   pdf.text((resumeData.fullName || 'YOUR NAME').toUpperCase(), pdfWidth / 2, y, { align: 'center' });
-  y += 5.5;
+  y += nameFs * 0.35 + 1;
 
   // Job Title
   if (resumeData.jobTitle) {
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10);
+    pdf.setFontSize(titleFs);
     pdf.setTextColor(55, 65, 81);
     pdf.text(resumeData.jobTitle, pdfWidth / 2, y, { align: 'center' });
-    y += 4.5;
+    y += titleFs * 0.35 + 1.5;
   }
 
   // Contact Info (Split into 2 clean lines if long to prevent margin overflow)
@@ -114,37 +152,37 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
   const cParts2 = [resumeData.linkedin, resumeData.github].filter(Boolean);
 
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8.5);
+  pdf.setFontSize(9);
   pdf.setTextColor(75, 85, 99);
 
   if (cParts1.length > 0) {
-    pdf.text(cParts1.join(' • '), pdfWidth / 2, y, { align: 'center' });
-    y += 4;
+    pdf.text(cParts1.join('  •  '), pdfWidth / 2, y, { align: 'center' });
+    y += 4.5;
   }
   if (cParts2.length > 0) {
-    pdf.text(cParts2.join(' • '), pdfWidth / 2, y, { align: 'center' });
-    y += 4;
+    pdf.text(cParts2.join('  •  '), pdfWidth / 2, y, { align: 'center' });
+    y += 4.5;
   }
 
   // Divider Line below Header
-  y += 0.5;
+  y += 1;
   pdf.setDrawColor(17, 24, 39);
   pdf.setLineWidth(0.4);
   pdf.line(margin, y, pdfWidth - margin, y);
-  y += 5;
+  y += sectionGap;
 
   // Section Header Helper
   const renderSectionHeader = (title) => {
-    checkPageBreak(10);
+    checkPageBreak(12);
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(headerFs);
     pdf.setTextColor(17, 24, 39);
     pdf.text(title.toUpperCase(), margin, y);
-    y += 1.5;
+    y += 1.8;
     pdf.setDrawColor(17, 24, 39);
-    pdf.setLineWidth(0.3);
+    pdf.setLineWidth(0.35);
     pdf.line(margin, y, pdfWidth - margin, y);
-    y += 4.2;
+    y += lineH - 0.5;
   };
 
   // 2. Professional Summary
@@ -159,7 +197,7 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
       pdf.text(line, margin, y);
       y += lineH;
     });
-    y += 2;
+    y += sectionGap - 2;
   }
 
   // 3. Technical Skills
@@ -253,7 +291,7 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
       });
     }
 
-    y += 2;
+    y += sectionGap - 2;
   }
 
   // 4. Work Experience
@@ -262,9 +300,9 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
   if (validExp.length > 0) {
     renderSectionHeader('WORK EXPERIENCE');
     validExp.forEach(exp => {
-      checkPageBreak(6);
+      checkPageBreak(7);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(9.5);
+      pdf.setFontSize(baseFs + 0.5);
       pdf.setTextColor(17, 24, 39);
       const titleText = exp.jobTitle || 'Role Title';
       pdf.text(titleText, margin, y);
@@ -278,12 +316,12 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
 
       if (exp.startDate || exp.endDate) {
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(8.5);
+        pdf.setFontSize(baseFs - 0.5);
         pdf.setTextColor(75, 85, 99);
         const dateStr = `${exp.startDate || ''} – ${exp.endDate || 'Present'}`;
         pdf.text(dateStr, pdfWidth - margin, y, { align: 'right' });
       }
-      y += 4.2;
+      y += lineH;
 
       if (exp.responsibilities) {
         pdf.setFont('helvetica', 'normal');
@@ -307,9 +345,9 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
           });
         });
       }
-      y += 2;
+      y += itemGap;
     });
-    y += 1.5;
+    y += sectionGap - 2;
   }
 
   // 5. Key Projects
@@ -318,20 +356,20 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
   if (validProj.length > 0) {
     renderSectionHeader('KEY PROJECTS');
     validProj.forEach((proj, pIdx) => {
-      checkPageBreak(6);
+      checkPageBreak(7);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(9.5);
+      pdf.setFontSize(baseFs + 0.5);
       pdf.setTextColor(17, 24, 39);
       pdf.text(proj.title || `Project #${pIdx + 1}`, margin, y);
-      y += 4.2;
+      y += lineH - 0.5;
 
       if (proj.techStack) {
-        checkPageBreak(4);
+        checkPageBreak(4.5);
         pdf.setFont('helvetica', 'italic');
-        pdf.setFontSize(8.5);
+        pdf.setFontSize(baseFs - 0.5);
         pdf.setTextColor(75, 85, 99);
         pdf.text(`Tech Stack: ${proj.techStack}`, margin, y);
-        y += 4.2;
+        y += lineH;
       }
 
       if (proj.description) {
@@ -356,9 +394,9 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
           });
         });
       }
-      y += 2;
+      y += itemGap;
     });
-    y += 1.5;
+    y += sectionGap - 2;
   }
 
   // 6. Certifications
@@ -367,7 +405,7 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
   if (validCerts.length > 0) {
     renderSectionHeader('CERTIFICATIONS & ACHIEVEMENTS');
     validCerts.forEach(cert => {
-      checkPageBreak(4.5);
+      checkPageBreak(5);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(baseFs);
       pdf.setTextColor(17, 24, 39);
@@ -382,13 +420,13 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
 
       if (cert.year) {
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(8.5);
+        pdf.setFontSize(baseFs - 0.5);
         pdf.setTextColor(75, 85, 99);
         pdf.text(cert.year, pdfWidth - margin, y, { align: 'right' });
       }
-      y += 4.5;
+      y += lineH + 0.5;
     });
-    y += 2;
+    y += sectionGap - 2;
   }
 
   // 7. Education
@@ -401,26 +439,26 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
     educations.forEach(edu => {
       checkPageBreak(7);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(9.5);
+      pdf.setFontSize(baseFs + 0.5);
       pdf.setTextColor(17, 24, 39);
       const degText = `${edu.degree || ''}${edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ''}${edu.score ? ` — ${edu.score}` : ''}`;
       pdf.text(degText, margin, y);
 
       if (edu.gradYear) {
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(8.5);
+        pdf.setFontSize(baseFs - 0.5);
         pdf.setTextColor(75, 85, 99);
         pdf.text(edu.gradYear, pdfWidth - margin, y, { align: 'right' });
       }
-      y += 4.2;
+      y += lineH;
 
       if (edu.university) {
-        checkPageBreak(4.2);
+        checkPageBreak(4.5);
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8.5);
+        pdf.setFontSize(baseFs - 0.5);
         pdf.setTextColor(75, 85, 99);
         pdf.text(edu.university, margin, y);
-        y += 4.5;
+        y += lineH + 0.5;
       }
     });
   }
