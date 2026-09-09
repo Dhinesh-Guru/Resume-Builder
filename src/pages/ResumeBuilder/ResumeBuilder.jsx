@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   User, Briefcase, GraduationCap, Award, FileDown, Plus, Trash2, 
-  ArrowRight, ArrowLeft, CheckCircle, Sparkles, AlertCircle, UserCheck, FolderGit2
+  ArrowRight, ArrowLeft, CheckCircle, Sparkles, AlertCircle, UserCheck, FolderGit2,
+  Layers
 } from 'lucide-react';
 import JobTitleSelector from '../../components/JobTitleSelector';
 import ResumePreview from './ResumePreview';
@@ -15,6 +16,11 @@ export default function ResumeBuilder({ onResumeCreated }) {
 
   // Experience Status: 'experienced' or 'fresher'
   const [experienceStatus, setExperienceStatus] = useState('experienced');
+
+  // Multi-Page & Overflow State
+  const [allowTwoPages, setAllowTwoPages] = useState(false);
+  const [showOverflowModal, setShowOverflowModal] = useState(false);
+  const [editorNotice, setEditorNotice] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -212,7 +218,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
   const handlePdfDownload = async () => {
     setDownloading(true);
     try {
-      await exportResumeToPdf('ats-resume-preview-document', `${formData.fullName.replace(/\s+/g, '_')}_Resume.pdf`);
+      await exportResumeToPdf('ats-resume-preview-document', `${formData.fullName.replace(/\s+/g, '_')}_Resume.pdf`, allowTwoPages);
     } catch (err) {
       alert('Failed to generate PDF: ' + err.message);
     } finally {
@@ -286,6 +292,30 @@ export default function ResumeBuilder({ onResumeCreated }) {
                 Change Job Title
               </button>
             </div>
+
+            {/* Helper Notice Banner when redirected to trim content */}
+            {editorNotice && (
+              <div style={{
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid var(--accent-primary)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '1rem',
+                marginBottom: '1.5rem',
+                color: 'var(--accent-primary)',
+                fontSize: '0.9rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>{editorNotice}</div>
+                <button 
+                  onClick={() => setEditorNotice('')} 
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontWeight: 700, cursor: 'pointer', fontSize: '1rem' }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
 
             {/* Validation Error Alert Box */}
             {Object.keys(errors).length > 0 && (
@@ -840,9 +870,16 @@ export default function ResumeBuilder({ onResumeCreated }) {
                 Single-column, ATS-safe format designed for maximum parsing accuracy.
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <button className="btn btn-secondary" onClick={() => setStep(2)}>
                 Edit Content
+              </button>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setAllowTwoPages(!allowTwoPages)}
+                title="Toggle between single page auto-fit and 2-page layout"
+              >
+                <Layers size={16} /> {allowTwoPages ? 'Page Layout: 2 Pages' : 'Page Layout: 1 Page (Auto-Fit)'}
               </button>
               <button className="btn btn-secondary" onClick={handleTxtDownload}>
                 <FileDown size={16} /> Download .TXT (ATS Raw)
@@ -855,11 +892,104 @@ export default function ResumeBuilder({ onResumeCreated }) {
 
           {/* Document Render Container */}
           <div style={{ background: 'var(--bg-surface-elevated)', padding: '2rem 1rem', borderRadius: 'var(--radius-lg)' }}>
-            <ResumePreview data={{ 
-              ...formData, 
-              experiences: experienceStatus === 'fresher' ? [] : formData.experiences,
-              jobTitle 
-            }} />
+            <ResumePreview 
+              data={{ 
+                ...formData, 
+                experiences: experienceStatus === 'fresher' ? [] : formData.experiences,
+                jobTitle 
+              }} 
+              allowTwoPages={allowTwoPages}
+              onOverflowDetected={(overflow) => {
+                if (overflow && !allowTwoPages && step === 3) {
+                  setShowOverflowModal(true);
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Overflow Warning Modal */}
+      {showOverflowModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--accent-primary)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            maxWidth: '560px',
+            width: '100%',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            color: 'var(--text-color)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--accent-warning)', marginBottom: '1rem' }}>
+              <AlertCircle size={28} />
+              <h3 style={{ fontSize: '1.25rem', margin: 0, fontWeight: 700 }}>Resume Exceeds Single Page Limit</h3>
+            </div>
+            
+            <p style={{ fontSize: '0.92rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+              Your resume contains too much information to fit onto a single page cleanly, even after automatically scaling down fonts. Please choose how you would like to proceed:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Option 1 Button */}
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowOverflowModal(false);
+                  setStep(2);
+                  setEditorNotice('💡 Tip for 1-Page Fitting: Try keeping 3–4 of your best projects or shortening bullet accomplishment points.');
+                }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  padding: '1rem',
+                  textAlign: 'left',
+                  borderColor: 'var(--accent-primary)',
+                  background: 'rgba(99, 102, 241, 0.08)'
+                }}
+              >
+                <strong style={{ fontSize: '0.98rem', color: 'var(--accent-primary)', marginBottom: '0.25rem' }}>
+                  ✂️ Option 1: Reduce Content (Keep 1 Page)
+                </strong>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Redirect back to editor to select 3-4 best projects or trim bullet text. None of your entered details will be changed or lost.
+                </span>
+              </button>
+
+              {/* Option 2 Button */}
+              <button 
+                className="btn btn-primary"
+                onClick={() => {
+                  setShowOverflowModal(false);
+                  setAllowTwoPages(true);
+                }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  padding: '1rem',
+                  textAlign: 'left'
+                }}
+              >
+                <strong style={{ fontSize: '0.98rem', marginBottom: '0.25rem' }}>
+                  📄 Option 2: Allow 2-Page Resume
+                </strong>
+                <span style={{ fontSize: '0.85rem', opacity: 0.9 }}>
+                  Create a 2-page resume with standard readable fonts for all your detailed accomplishments.
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useLayoutEffect } from 'react';
 
 const LABEL_MAP = {
   languages: 'Programming Languages',
@@ -35,7 +35,10 @@ const LABEL_MAP = {
   coreTools: 'Tools & Technologies'
 };
 
-export default function ResumePreview({ data }) {
+export default function ResumePreview({ data, allowTwoPages = false, onOverflowDetected }) {
+  const containerRef = useRef(null);
+  const [fontScale, setFontScale] = useState(1.0);
+
   const {
     fullName = 'YOUR FULL NAME',
     email = 'email@example.com',
@@ -58,6 +61,35 @@ export default function ResumePreview({ data }) {
     extraAnswers = {}
   } = data || {};
 
+  // Dynamic Font Scaling and Single-Page Overflow Detection
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+
+    if (allowTwoPages) {
+      setFontScale(1.0);
+      if (onOverflowDetected) onOverflowDetected(false);
+      return;
+    }
+
+    const element = containerRef.current;
+    // Single page container height target for A4 @ 800px width
+    const SINGLE_PAGE_MAX_HEIGHT = 1060;
+    const currentHeight = element.scrollHeight;
+
+    if (currentHeight > SINGLE_PAGE_MAX_HEIGHT) {
+      if (fontScale > 0.92) {
+        setFontScale(0.9);
+      } else if (fontScale > 0.83) {
+        setFontScale(0.82);
+      } else {
+        // Still overflows at minimum font scale (0.82)
+        if (onOverflowDetected) {
+          onOverflowDetected(true);
+        }
+      }
+    }
+  }, [data, fontScale, allowTwoPages, onOverflowDetected]);
+
   // Check if extraAnswers has valid skill entries
   const hasExtraSkills = Object.values(extraAnswers).some(val => val && val.trim().length > 0);
   const validProjects = Array.isArray(projects) ? projects.filter(p => p.title?.trim() || p.description?.trim()) : [];
@@ -69,34 +101,40 @@ export default function ResumePreview({ data }) {
     ? educations.filter(e => e.degree?.trim() || e.university?.trim())
     : (degree || university ? [{ degree, fieldOfStudy, university, gradYear }] : []);
 
+  // Helper font size scaler
+  const fs = (basePt) => `${(basePt * fontScale).toFixed(1)}pt`;
+  const spacing = (baseRem) => `${(baseRem * fontScale).toFixed(2)}rem`;
+
   return (
     <div 
       id="ats-resume-preview-document"
+      ref={containerRef}
       style={{
         background: '#ffffff',
         color: '#111827',
         fontFamily: 'Inter, Arial, sans-serif',
-        padding: '2.5rem',
+        padding: spacing(2.5),
         borderRadius: '4px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
         minHeight: '800px',
-        lineHeight: 1.5,
-        fontSize: '10pt',
+        lineHeight: 1.45,
+        fontSize: fs(10),
         width: '100%',
         maxWidth: '800px',
         margin: '0 auto',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        position: 'relative'
       }}
     >
       {/* Header / Contact Info */}
-      <div style={{ textAlign: 'center', borderBottom: '2px solid #111827', paddingBottom: '0.85rem', marginBottom: '1.25rem' }}>
-        <h1 style={{ fontSize: '18pt', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#111827', margin: 0 }}>
+      <div style={{ textAlign: 'center', borderBottom: '2px solid #111827', paddingBottom: spacing(0.75), marginBottom: spacing(1.15) }}>
+        <h1 style={{ fontSize: fs(18), fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#111827', margin: 0 }}>
           {fullName || 'YOUR NAME'}
         </h1>
-        <p style={{ fontSize: '11pt', fontWeight: 700, color: '#374151', margin: '0.2rem 0 0.5rem 0' }}>
+        <p style={{ fontSize: fs(11), fontWeight: 700, color: '#374151', margin: '0.2rem 0 0.4rem 0' }}>
           {jobTitle}
         </p>
-        <div style={{ fontSize: '9pt', color: '#4b5563', display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.5rem 0.75rem' }}>
+        <div style={{ fontSize: fs(9), color: '#4b5563', display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.4rem 0.75rem' }}>
           {email && <span>{email}</span>}
           {phone && <span>• {phone}</span>}
           {location && <span>• {location}</span>}
@@ -107,11 +145,11 @@ export default function ResumePreview({ data }) {
 
       {/* Professional Summary */}
       {summary && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <h2 style={{ fontSize: '11pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.25rem', marginBottom: '0.4rem', color: '#111827' }}>
+        <div style={{ marginBottom: spacing(1.15) }}>
+          <h2 style={{ fontSize: fs(11), fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.2rem', marginBottom: '0.35rem', color: '#111827' }}>
             PROFESSIONAL SUMMARY
           </h2>
-          <p style={{ margin: 0, textAlign: 'justify', color: '#374151', fontSize: '9.5pt', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, textAlign: 'justify', color: '#374151', fontSize: fs(9.5), lineHeight: 1.45 }}>
             {summary}
           </p>
         </div>
@@ -119,13 +157,13 @@ export default function ResumePreview({ data }) {
 
       {/* Technical Skills & Competencies */}
       {(hasExtraSkills || skills || otherSkills) && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <h2 style={{ fontSize: '11pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.25rem', marginBottom: '0.5rem', color: '#111827' }}>
+        <div style={{ marginBottom: spacing(1.15) }}>
+          <h2 style={{ fontSize: fs(11), fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.2rem', marginBottom: '0.4rem', color: '#111827' }}>
             TECHNICAL SKILLS
           </h2>
           {hasExtraSkills && (
             Object.entries(extraAnswers).map(([key, val]) => val && val.trim() ? (
-              <div key={key} style={{ marginBottom: '0.3rem', fontSize: '9.5pt' }}>
+              <div key={key} style={{ marginBottom: '0.25rem', fontSize: fs(9.5) }}>
                 <strong style={{ color: '#111827', fontWeight: 700 }}>
                   {LABEL_MAP[key] || key.replace(/([A-Z])/g, ' $1')}:
                 </strong>{' '}
@@ -135,14 +173,14 @@ export default function ResumePreview({ data }) {
           )}
 
           {otherSkills && otherSkills.trim() && (
-            <div style={{ marginBottom: '0.3rem', fontSize: '9.5pt' }}>
+            <div style={{ marginBottom: '0.25rem', fontSize: fs(9.5) }}>
               <strong style={{ color: '#111827', fontWeight: 700 }}>Additional Tools & Software:</strong>{' '}
               <span style={{ color: '#374151' }}>{otherSkills}</span>
             </div>
           )}
 
           {!hasExtraSkills && skills && (
-            <div style={{ fontSize: '9.5pt', color: '#374151' }}>
+            <div style={{ fontSize: fs(9.5), color: '#374151' }}>
               <strong style={{ color: '#111827', fontWeight: 700 }}>Core Skills:</strong> {skills}
             </div>
           )}
@@ -151,27 +189,27 @@ export default function ResumePreview({ data }) {
 
       {/* Work Experience */}
       {validExperiences.length > 0 && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <h2 style={{ fontSize: '11pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.25rem', marginBottom: '0.6rem', color: '#111827' }}>
+        <div style={{ marginBottom: spacing(1.15) }}>
+          <h2 style={{ fontSize: fs(11), fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.2rem', marginBottom: '0.5rem', color: '#111827' }}>
             WORK EXPERIENCE
           </h2>
           {validExperiences.map((exp, idx) => (
-            <div key={idx} style={{ marginBottom: '0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', color: '#111827', fontSize: '10pt' }}>
+            <div key={idx} style={{ marginBottom: spacing(0.75) }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', color: '#111827', fontSize: fs(10) }}>
                 <div>
                   <strong style={{ fontWeight: 700 }}>{exp.jobTitle || 'Role Title'}</strong>
                   {exp.company && <span style={{ color: '#374151', fontWeight: 600 }}> — {exp.company}</span>}
                 </div>
                 {(exp.startDate || exp.endDate) && (
-                  <span style={{ fontSize: '9pt', fontWeight: 600, color: '#4b5563' }}>
+                  <span style={{ fontSize: fs(9), fontWeight: 600, color: '#4b5563' }}>
                     {exp.startDate || 'Start'} – {exp.endDate || 'Present'}
                   </span>
                 )}
               </div>
               {exp.responsibilities && (
-                <div style={{ marginTop: '0.25rem', color: '#374151', fontSize: '9.5pt' }}>
+                <div style={{ marginTop: '0.2rem', color: '#374151', fontSize: fs(9.5) }}>
                   {exp.responsibilities.split('\n').map((bullet, bIdx) => bullet.trim() ? (
-                    <div key={bIdx} style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.15rem' }}>
+                    <div key={bIdx} style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.12rem' }}>
                       <span style={{ color: '#111827' }}>•</span>
                       <span>{bullet.replace(/^•\s*/, '')}</span>
                     </div>
@@ -183,26 +221,29 @@ export default function ResumePreview({ data }) {
         </div>
       )}
 
-      {/* Key Projects */}
+      {/* Key Projects - Fixed Tech Stack placement below title */}
       {validProjects.length > 0 && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <h2 style={{ fontSize: '11pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.25rem', marginBottom: '0.6rem', color: '#111827' }}>
+        <div style={{ marginBottom: spacing(1.15) }}>
+          <h2 style={{ fontSize: fs(11), fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.2rem', marginBottom: '0.5rem', color: '#111827' }}>
             KEY PROJECTS
           </h2>
           {validProjects.map((proj, idx) => (
-            <div key={idx} style={{ marginBottom: '0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', color: '#111827', fontSize: '10pt', flexWrap: 'wrap', gap: '0.25rem' }}>
-                <strong style={{ fontWeight: 700 }}>{proj.title || `Project #${idx + 1}`}</strong>
-                {proj.techStack && (
-                  <span style={{ fontSize: '9pt', color: '#4b5563', fontStyle: 'italic', fontWeight: 500 }}>
-                    Tech Stack: {proj.techStack}
-                  </span>
-                )}
+            <div key={idx} style={{ marginBottom: spacing(0.75) }}>
+              {/* Line 1: Project Title in Bold */}
+              <div style={{ color: '#111827', fontSize: fs(10), fontWeight: 700 }}>
+                {proj.title || `Project #${idx + 1}`}
               </div>
+              {/* Line 2: Tech Stack directly below Project Title in Italics */}
+              {proj.techStack && (
+                <div style={{ fontSize: fs(9), color: '#4b5563', fontStyle: 'italic', fontWeight: 500, marginTop: '0.1rem' }}>
+                  Tech Stack: {proj.techStack}
+                </div>
+              )}
+              {/* Line 3: Project Description Bullets */}
               {proj.description && (
-                <div style={{ marginTop: '0.25rem', color: '#374151', fontSize: '9.5pt' }}>
+                <div style={{ marginTop: '0.2rem', color: '#374151', fontSize: fs(9.5) }}>
                   {proj.description.split('\n').map((bullet, bIdx) => bullet.trim() ? (
-                    <div key={bIdx} style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.15rem' }}>
+                    <div key={bIdx} style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.12rem' }}>
                       <span style={{ color: '#111827' }}>•</span>
                       <span>{bullet.replace(/^•\s*/, '')}</span>
                     </div>
@@ -216,17 +257,17 @@ export default function ResumePreview({ data }) {
 
       {/* Certifications & Achievements (Optional) */}
       {validCerts.length > 0 && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <h2 style={{ fontSize: '11pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.25rem', marginBottom: '0.5rem', color: '#111827' }}>
+        <div style={{ marginBottom: spacing(1.15) }}>
+          <h2 style={{ fontSize: fs(11), fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.2rem', marginBottom: '0.4rem', color: '#111827' }}>
             CERTIFICATIONS & ACHIEVEMENTS
           </h2>
           {validCerts.map((cert, idx) => (
-            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', color: '#111827', fontSize: '9.5pt', marginBottom: '0.25rem' }}>
+            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', color: '#111827', fontSize: fs(9.5), marginBottom: '0.2rem' }}>
               <div>
                 <strong style={{ fontWeight: 700 }}>{cert.name}</strong>
                 {cert.issuer && <span style={{ color: '#4b5563' }}> — {cert.issuer}</span>}
               </div>
-              {cert.year && <span style={{ fontWeight: 600, color: '#4b5563', fontSize: '9pt' }}>{cert.year}</span>}
+              {cert.year && <span style={{ fontWeight: 600, color: '#4b5563', fontSize: fs(9) }}>{cert.year}</span>}
             </div>
           ))}
         </div>
@@ -234,22 +275,41 @@ export default function ResumePreview({ data }) {
 
       {/* Education Qualifications */}
       {validEducations.length > 0 && (
-        <div style={{ marginBottom: '1rem' }}>
-          <h2 style={{ fontSize: '11pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.25rem', marginBottom: '0.4rem', color: '#111827' }}>
+        <div style={{ marginBottom: spacing(1.0) }}>
+          <h2 style={{ fontSize: fs(11), fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111827', paddingBottom: '0.2rem', marginBottom: '0.35rem', color: '#111827' }}>
             EDUCATION
           </h2>
           {validEducations.map((edu, idx) => (
-            <div key={idx} style={{ marginBottom: '0.45rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontWeight: 700, color: '#111827', fontSize: '10pt' }}>
+            <div key={idx} style={{ marginBottom: '0.4rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontWeight: 700, color: '#111827', fontSize: fs(10) }}>
                 <span>
                   {edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}
-                  {edu.score && <span style={{ fontWeight: 600, color: '#374151', fontSize: '9pt' }}> — {edu.score}</span>}
+                  {edu.score && <span style={{ fontWeight: 600, color: '#374151', fontSize: fs(9) }}> — {edu.score}</span>}
                 </span>
-                {edu.gradYear && <span style={{ fontSize: '9pt', color: '#4b5563', fontWeight: 600 }}>{edu.gradYear}</span>}
+                {edu.gradYear && <span style={{ fontSize: fs(9), color: '#4b5563', fontWeight: 600 }}>{edu.gradYear}</span>}
               </div>
-              {edu.university && <div style={{ color: '#4b5563', fontSize: '9.5pt', marginTop: '0.05rem' }}>{edu.university}</div>}
+              {edu.university && <div style={{ color: '#4b5563', fontSize: fs(9.5), marginTop: '0.05rem' }}>{edu.university}</div>}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Visual Page Break Indicator when 2-Page mode is enabled */}
+      {allowTwoPages && (
+        <div style={{
+          marginTop: '2.5rem',
+          padding: '0.6rem 0',
+          borderTop: '2px dashed #9ca3af',
+          borderBottom: '2px dashed #9ca3af',
+          textAlign: 'center',
+          fontSize: '9pt',
+          fontWeight: 700,
+          color: '#4b5563',
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          background: '#f3f4f6'
+        }}>
+          📄 --- End of Page 1 / Start of Page 2 --- 📄
         </div>
       )}
     </div>

@@ -4,7 +4,7 @@ import { jsPDF } from 'jspdf';
 /**
  * Downloads standard ATS-friendly PDF of the element
  */
-export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf') {
+export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', allowTwoPages = false) {
   const element = document.getElementById(elementId);
   if (!element) throw new Error('Resume element not found for export');
 
@@ -21,12 +21,30 @@ export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf') 
   const pdfHeight = pdf.internal.pageSize.getHeight();
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
-  const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-  
-  const width = imgWidth * ratio;
-  const height = imgHeight * ratio;
 
-  pdf.addImage(imgData, 'JPEG', 0, 0, width, height);
+  const renderWidth = pdfWidth;
+  const renderHeight = (imgHeight * pdfWidth) / imgWidth;
+
+  if (!allowTwoPages || renderHeight <= pdfHeight + 5) {
+    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+    const width = imgWidth * ratio;
+    const height = imgHeight * ratio;
+    pdf.addImage(imgData, 'JPEG', 0, 0, width, height);
+  } else {
+    let heightLeft = renderHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'JPEG', 0, position, renderWidth, renderHeight);
+    heightLeft -= pdfHeight;
+
+    while (heightLeft > 5) {
+      position -= pdfHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, renderWidth, renderHeight);
+      heightLeft -= pdfHeight;
+    }
+  }
+
   pdf.save(filename);
 }
 
