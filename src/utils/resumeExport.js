@@ -22,25 +22,35 @@ export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', 
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
 
-  const renderWidth = pdfWidth;
-  const renderHeight = (imgHeight * pdfWidth) / imgWidth;
+  // Render width fills the full A4 page width (210mm)
+  const pageRenderWidth = pdfWidth;
+  const pageRenderHeight = (imgHeight * pdfWidth) / imgWidth;
 
-  if (!allowTwoPages || renderHeight <= pdfHeight + 5) {
-    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-    const width = imgWidth * ratio;
-    const height = imgHeight * ratio;
-    pdf.addImage(imgData, 'JPEG', 0, 0, width, height);
+  if (!allowTwoPages || pageRenderHeight <= pdfHeight + 5) {
+    if (pageRenderHeight <= pdfHeight + 5) {
+      // Content fits nicely on 1 page at full A4 width!
+      pdf.addImage(imgData, 'JPEG', 0, 0, pageRenderWidth, pageRenderHeight);
+    } else {
+      // Content is slightly taller than 1 page but single page mode forced:
+      // Proportionally scale to fit inside A4 dimensions and center horizontally
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const width = imgWidth * ratio;
+      const height = imgHeight * ratio;
+      const xOffset = Math.max(0, (pdfWidth - width) / 2);
+      pdf.addImage(imgData, 'JPEG', xOffset, 0, width, height);
+    }
   } else {
-    let heightLeft = renderHeight;
+    // Multi-page export
+    let heightLeft = pageRenderHeight;
     let position = 0;
 
-    pdf.addImage(imgData, 'JPEG', 0, position, renderWidth, renderHeight);
+    pdf.addImage(imgData, 'JPEG', 0, position, pageRenderWidth, pageRenderHeight);
     heightLeft -= pdfHeight;
 
     while (heightLeft > 5) {
       position -= pdfHeight;
       pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, renderWidth, renderHeight);
+      pdf.addImage(imgData, 'JPEG', 0, position, pageRenderWidth, pageRenderHeight);
       heightLeft -= pdfHeight;
     }
   }
