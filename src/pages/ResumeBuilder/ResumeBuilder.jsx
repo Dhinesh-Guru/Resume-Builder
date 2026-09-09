@@ -66,10 +66,25 @@ export default function ResumeBuilder({ onResumeCreated }) {
     setUploadSuccessMsg('');
 
     try {
-      const text = await extractTextFromFile(file);
-      const parsed = parseResumeTextToFormData(text);
+      const result = await extractTextFromFile(file);
+
+      let parsed = null;
+      if (result.isJson && result.data) {
+        parsed = result.data;
+      } else if (result.text) {
+        parsed = parseResumeTextToFormData(result.text);
+      }
 
       if (parsed) {
+        const hasContent = parsed.fullName || parsed.email || parsed.summary || parsed.otherSkills || 
+          parsed.experiences?.some(e => e.jobTitle || e.company) || 
+          parsed.projects?.some(p => p.title || p.description) || 
+          parsed.educations?.some(ed => ed.degree || ed.university);
+
+        if (!hasContent) {
+          throw new Error('No readable contact details or text sections could be extracted from this file.');
+        }
+
         setFormData(prev => ({
           ...prev,
           fullName: parsed.fullName || prev.fullName,
@@ -83,17 +98,21 @@ export default function ResumeBuilder({ onResumeCreated }) {
           projects: parsed.projects?.length > 0 ? parsed.projects : prev.projects,
           experiences: parsed.experiences?.length > 0 ? parsed.experiences : prev.experiences,
           certifications: parsed.certifications?.length > 0 ? parsed.certifications : prev.certifications,
-          educations: parsed.educations?.length > 0 ? parsed.educations : prev.educations
+          educations: parsed.educations?.length > 0 ? parsed.educations : prev.educations,
+          extraAnswers: parsed.extraAnswers || prev.extraAnswers
         }));
 
-        setUploadSuccessMsg(`🎉 Successfully extracted details from "${file.name}"! All fields are pre-filled below for you to edit.`);
-        if (!jobTitle) {
+        if (parsed.jobTitle) {
+          setJobTitle(parsed.jobTitle);
+        } else if (!jobTitle) {
           setJobTitle('Software Developer / Engineer');
         }
+
+        setUploadSuccessMsg(`🎉 Successfully imported resume details from "${file.name}"! All fields are pre-filled below for you to edit.`);
         setStep(2);
       }
     } catch (err) {
-      alert('Could not parse resume file: ' + err.message);
+      alert('Could not import resume: ' + err.message);
     } finally {
       setUploadingResume(false);
       event.target.value = '';
@@ -267,7 +286,9 @@ export default function ResumeBuilder({ onResumeCreated }) {
   const handlePdfDownload = async () => {
     setDownloading(true);
     try {
-      await exportResumeToPdf('ats-resume-preview-document', `${formData.fullName.replace(/\s+/g, '_')}_Resume.pdf`, allowTwoPages);
+      const finalExperiences = experienceStatus === 'fresher' ? [] : formData.experiences;
+      const fullData = { ...formData, experiences: finalExperiences, jobTitle, experienceStatus };
+      await exportResumeToPdf('ats-resume-preview-document', `${formData.fullName.replace(/\s+/g, '_')}_Resume.pdf`, allowTwoPages, fullData);
     } catch (err) {
       alert('Failed to generate PDF: ' + err.message);
     } finally {
@@ -332,7 +353,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
               <Upload size={24} /> Edit an Existing Resume (PDF / DOCX / TXT)
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '650px', margin: '0 auto 1.25rem auto' }}>
-              Don't want to enter your details from scratch? Upload your existing resume file to automatically extract your contact details, experience, projects, education, and skills!
+              Upload your existing resume file to automatically extract your contact details, experience, projects, education, and skills!
             </p>
             <label className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', padding: '0.75rem 1.5rem', fontSize: '1rem', cursor: 'pointer' }}>
               <FileText size={20} /> {uploadingResume ? 'Parsing Resume Details...' : 'Upload & Edit Existing Resume File'}
@@ -367,7 +388,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <label className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
-                  <Upload size={14} /> Import/Upload Different Resume PDF
+                  <Upload size={14} /> Import Different Resume PDF
                   <input 
                     type="file" 
                     accept=".pdf,.docx,.txt" 

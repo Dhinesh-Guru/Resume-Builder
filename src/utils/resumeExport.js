@@ -2,9 +2,9 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
 /**
- * Downloads standard ATS-friendly PDF of the element
+ * Downloads standard ATS-friendly PDF of the element and embeds resume JSON metadata for instant re-importing
  */
-export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', allowTwoPages = false) {
+export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', allowTwoPages = false, resumeData = null) {
   const element = document.getElementById(elementId);
   if (!element) throw new Error('Resume element not found for export');
 
@@ -22,6 +22,20 @@ export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', 
     const imgData = canvas.toDataURL('image/jpeg', 1.0);
     const pdf = new jsPDF('p', 'mm', 'a4');
     
+    // Embed resume JSON metadata inside PDF header so it can be re-imported with 100% accuracy
+    if (resumeData) {
+      try {
+        pdf.setProperties({
+          title: filename,
+          subject: JSON.stringify(resumeData),
+          author: resumeData.fullName || 'ATS Resume Builder',
+          keywords: 'ATS_RESUME_BUILDER_DATA'
+        });
+      } catch (e) {
+        console.warn('Failed to embed PDF metadata:', e);
+      }
+    }
+
     const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
     const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
     const imgWidth = canvas.width;
