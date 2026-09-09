@@ -38,6 +38,7 @@ const LABEL_MAP = {
 export default function ResumePreview({ data, allowTwoPages = false, onOverflowDetected }) {
   const containerRef = useRef(null);
   const [fontScale, setFontScale] = useState(1.0);
+  const [isOverflowing, setIsOverflowing] = useState(false);
 
   const {
     fullName = 'YOUR FULL NAME',
@@ -61,31 +62,38 @@ export default function ResumePreview({ data, allowTwoPages = false, onOverflowD
     extraAnswers = {}
   } = data || {};
 
-  // Dynamic Font Scaling and Single-Page Overflow Detection
+  // Controlled Font Scaling & Overflow Detection
   useLayoutEffect(() => {
     if (!containerRef.current) return;
 
     if (allowTwoPages) {
       setFontScale(1.0);
+      setIsOverflowing(true);
       if (onOverflowDetected) onOverflowDetected(false);
       return;
     }
 
     const element = containerRef.current;
-    // Single page container height target for A4 @ 800px width
+    // Standard A4 container height target at 800px width
     const SINGLE_PAGE_MAX_HEIGHT = 1060;
     const currentHeight = element.scrollHeight;
 
     if (currentHeight > SINGLE_PAGE_MAX_HEIGHT) {
-      if (fontScale > 0.92) {
-        setFontScale(0.9);
-      } else if (fontScale > 0.83) {
-        setFontScale(0.82);
+      if (fontScale > 0.95) {
+        // Apply gentle minor scaling (0.94) to fit slight overflows comfortably
+        setFontScale(0.94);
       } else {
-        // Still overflows at minimum font scale (0.82)
+        // Content exceeds single page even with gentle font scale (0.94)
+        setIsOverflowing(true);
         if (onOverflowDetected) {
           onOverflowDetected(true);
         }
+      }
+    } else {
+      setIsOverflowing(false);
+      // If content fits comfortably at 1.0, maintain standard full-size fonts
+      if (currentHeight < 900 && fontScale < 1.0) {
+        setFontScale(1.0);
       }
     }
   }, [data, fontScale, allowTwoPages, onOverflowDetected]);
@@ -294,22 +302,26 @@ export default function ResumePreview({ data, allowTwoPages = false, onOverflowD
         </div>
       )}
 
-      {/* Visual Page Break Indicator when 2-Page mode is enabled */}
-      {allowTwoPages && (
-        <div style={{
-          marginTop: '2.5rem',
-          padding: '0.6rem 0',
-          borderTop: '2px dashed #9ca3af',
-          borderBottom: '2px dashed #9ca3af',
-          textAlign: 'center',
-          fontSize: '9pt',
-          fontWeight: 700,
-          color: '#4b5563',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          background: '#f3f4f6'
-        }}>
-          📄 --- End of Page 1 / Start of Page 2 --- 📄
+      {/* Visual Page Break Line (Hidden automatically on PDF Export) */}
+      {(allowTwoPages || isOverflowing) && (
+        <div 
+          className="page-break-indicator"
+          style={{
+            marginTop: '2rem',
+            marginBottom: '1rem',
+            padding: '0.6rem 0',
+            borderTop: '2px dashed #6366f1',
+            borderBottom: '2px dashed #6366f1',
+            textAlign: 'center',
+            fontSize: '9pt',
+            fontWeight: 700,
+            color: '#4f46e5',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            background: 'rgba(99, 102, 241, 0.08)'
+          }}
+        >
+          📄 --- PAGE 1 ENDS HERE | PAGE 2 STARTS BELOW --- 📄
         </div>
       )}
     </div>

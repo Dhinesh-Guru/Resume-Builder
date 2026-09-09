@@ -8,54 +8,57 @@ export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', 
   const element = document.getElementById(elementId);
   if (!element) throw new Error('Resume element not found for export');
 
-  const canvas = await html2canvas(element, {
-    scale: 2, // High resolution
-    useCORS: true,
-    backgroundColor: '#ffffff'
-  });
+  // Temporarily hide visual page break indicators during canvas capture
+  const pageBreaks = element.querySelectorAll('.page-break-indicator');
+  pageBreaks.forEach(el => { el.style.display = 'none'; });
 
-  const imgData = canvas.toDataURL('image/jpeg', 1.0);
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = pdf.internal.pageSize.getHeight();
-  const imgWidth = canvas.width;
-  const imgHeight = canvas.height;
+  try {
+    const canvas = await html2canvas(element, {
+      scale: 2, // High resolution
+      useCORS: true,
+      backgroundColor: '#ffffff'
+    });
 
-  // Render width fills the full A4 page width (210mm)
-  const pageRenderWidth = pdfWidth;
-  const pageRenderHeight = (imgHeight * pdfWidth) / imgWidth;
+    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
+    const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
 
-  if (!allowTwoPages || pageRenderHeight <= pdfHeight + 5) {
-    if (pageRenderHeight <= pdfHeight + 5) {
-      // Content fits nicely on 1 page at full A4 width!
-      pdf.addImage(imgData, 'JPEG', 0, 0, pageRenderWidth, pageRenderHeight);
-    } else {
-      // Content is slightly taller than 1 page but single page mode forced:
-      // Proportionally scale to fit inside A4 dimensions and center horizontally
+    if (!allowTwoPages) {
+      // STRICT SINGLE PAGE MODE: Guaranteed to NEVER spill onto Page 2
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
       const width = imgWidth * ratio;
       const height = imgHeight * ratio;
+
+      // Center horizontally on A4 page
       const xOffset = Math.max(0, (pdfWidth - width) / 2);
       pdf.addImage(imgData, 'JPEG', xOffset, 0, width, height);
-    }
-  } else {
-    // Multi-page export
-    let heightLeft = pageRenderHeight;
-    let position = 0;
+    } else {
+      // MULTI-PAGE MODE: Full width rendering with clean page slicing
+      const pageRenderWidth = pdfWidth;
+      const pageRenderHeight = (imgHeight * pdfWidth) / imgWidth;
+      let heightLeft = pageRenderHeight;
+      let position = 0;
 
-    pdf.addImage(imgData, 'JPEG', 0, position, pageRenderWidth, pageRenderHeight);
-    heightLeft -= pdfHeight;
-
-    while (heightLeft > 5) {
-      position -= pdfHeight;
-      pdf.addPage();
       pdf.addImage(imgData, 'JPEG', 0, position, pageRenderWidth, pageRenderHeight);
       heightLeft -= pdfHeight;
-    }
-  }
 
-  pdf.save(filename);
+      while (heightLeft > 5) {
+        position -= pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, pageRenderWidth, pageRenderHeight);
+        heightLeft -= pdfHeight;
+      }
+    }
+
+    pdf.save(filename);
+  } finally {
+    // Restore page break indicators after export
+    pageBreaks.forEach(el => { el.style.display = ''; });
+  }
 }
 
 /**
