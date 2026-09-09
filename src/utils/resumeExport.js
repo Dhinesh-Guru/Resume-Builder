@@ -2,68 +2,43 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
 /**
- * Downloads PDF that is 100% VISUALLY IDENTICAL to the on-screen preview.
- * Fills 100% of the single A4 page with exact Inter font styling, margins, and spacing,
- * while embedding invisible ATS text streams and JSON metadata for 100% ATS score & loss-less re-importing.
+ * Downloads 100% Vector Native Text PDF with editable text, full A4 page fill, and ATS compliance.
  */
 export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', allowTwoPages = false, resumeData = null) {
+  if (resumeData) {
+    return exportNativeVectorPdf(resumeData, filename, allowTwoPages);
+  }
+
+  // Fallback canvas export if resumeData is not provided
   const element = document.getElementById(elementId);
   if (!element) throw new Error('Resume element not found for export');
 
-  // Temporarily hide visual page break indicators during canvas capture
   const pageBreaks = element.querySelectorAll('.page-break-indicator');
   pageBreaks.forEach(el => { el.style.display = 'none'; });
 
   try {
-    const canvas = await html2canvas(element, {
-      scale: 2.5, // Ultra high resolution (300 DPI equivalent)
-      useCORS: true,
-      backgroundColor: '#ffffff'
-    });
-
+    const canvas = await html2canvas(element, { scale: 2.5, useCORS: true, backgroundColor: '#ffffff' });
     const imgData = canvas.toDataURL('image/jpeg', 0.98);
     const pdf = new jsPDF('p', 'mm', 'a4');
-    
-    const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
-    const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
     const imgWidth = canvas.width;
     const imgHeight = canvas.height;
 
-    // Embed resume JSON metadata inside PDF header so it can be re-imported with 100% accuracy
-    if (resumeData) {
-      try {
-        pdf.setProperties({
-          title: filename,
-          subject: JSON.stringify(resumeData),
-          author: resumeData.fullName || 'ATS Resume Builder',
-          keywords: 'ATS_RESUME_BUILDER_DATA'
-        });
-      } catch (e) {
-        console.warn('Failed to embed PDF metadata:', e);
-      }
-    }
-
     if (!allowTwoPages) {
-      // 100% EXACT MATCH WITH PREVIEW: Scales image to fill single A4 page perfectly
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
       const renderW = imgWidth * ratio;
       const renderH = imgHeight * ratio;
-
-      // Position centered vertically and horizontally to fill A4 page gracefully
       const xOffset = (pdfWidth - renderW) / 2;
       const yOffset = (pdfHeight - renderH) / 2;
-
       pdf.addImage(imgData, 'JPEG', xOffset, yOffset, renderW, renderH);
     } else {
-      // MULTI-PAGE MODE: Full width rendering with clean page slicing
       const pageRenderWidth = pdfWidth;
       const pageRenderHeight = (imgHeight * pdfWidth) / imgWidth;
       let heightLeft = pageRenderHeight;
       let position = 0;
-
       pdf.addImage(imgData, 'JPEG', 0, position, pageRenderWidth, pageRenderHeight);
       heightLeft -= pdfHeight;
-
       while (heightLeft > 5) {
         position -= pdfHeight;
         pdf.addPage();
@@ -72,46 +47,16 @@ export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', 
       }
     }
 
-    // Embed invisible ATS readable text layer so ATS systems scan every line
-    if (resumeData) {
-      try {
-        pdf.setTextColor(255, 255, 255); // Invisible white text layer
-        pdf.setFontSize(1);
-
-        const textLines = [
-          resumeData.fullName,
-          `${resumeData.email || ''} ${resumeData.phone || ''} ${resumeData.location || ''} ${resumeData.linkedin || ''} ${resumeData.github || ''}`,
-          `JOB TITLE: ${resumeData.jobTitle || ''}`,
-          `SUMMARY: ${resumeData.summary || ''}`,
-          `SKILLS: ${resumeData.otherSkills || ''}`,
-          ...(resumeData.experiences || []).map(e => `EXPERIENCE: ${e.jobTitle || ''} ${e.company || ''} ${e.startDate || ''} ${e.endDate || ''} ${e.responsibilities || ''}`),
-          ...(resumeData.projects || []).map(p => `PROJECT: ${p.title || ''} ${p.techStack || ''} ${p.description || ''}`),
-          ...(resumeData.certifications || []).map(c => `CERTIFICATION: ${c.name || ''} ${c.issuer || ''} ${c.year || ''}`),
-          ...(resumeData.educations || []).map(ed => `EDUCATION: ${ed.degree || ''} ${ed.fieldOfStudy || ''} ${ed.university || ''} ${ed.gradYear || ''} ${ed.score || ''}`)
-        ].filter(Boolean);
-
-        let tY = 5;
-        textLines.forEach(line => {
-          pdf.text(line.replace(/[\r\n]+/g, ' ').slice(0, 400), 5, tY);
-          tY += 2;
-        });
-      } catch (tErr) {}
-    }
-
     pdf.save(filename);
   } finally {
-    // Restore page break indicators after export
     pageBreaks.forEach(el => { el.style.display = ''; });
   }
 }
 
 /**
  * Generates 100% True Vector Native Text PDF using jsPDF.
- * Text is 100% selectable, copyable, crisp, and ATS compliant.
- */
-/**
- * Generates 100% True Vector Native Text PDF using jsPDF.
- * Dynamically balances font sizes, line heights, and section gaps to fill 90-95% of A4 page cleanly.
+ * Text is 100% selectable, copyable, editable, crisp, beautifully aligned, and ATS compliant.
+ * Dynamically balances font sizes, line heights, and section gaps to fill 92-95% of A4 page cleanly.
  */
 export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', allowTwoPages = false) {
   const pdf = new jsPDF('p', 'mm', 'a4');
