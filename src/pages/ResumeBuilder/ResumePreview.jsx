@@ -62,9 +62,19 @@ export default function ResumePreview({ data, allowTwoPages = false, onOverflowD
     extraAnswers = {}
   } = data || {};
 
+  const [page1Height, setPage1Height] = useState(1060);
+
   // Controlled Font Scaling & Overflow Detection
   useLayoutEffect(() => {
     if (!containerRef.current) return;
+
+    const element = containerRef.current;
+    // Standard A4 aspect ratio height based on current container width
+    const calculatedPage1Height = Math.round((element.clientWidth || 800) * (297 / 210));
+    setPage1Height(calculatedPage1Height);
+
+    // Height limit with padding offset (approx 1060px for 800px width)
+    const SINGLE_PAGE_MAX_HEIGHT = calculatedPage1Height - 50;
 
     if (allowTwoPages) {
       setFontScale(1.0);
@@ -73,17 +83,14 @@ export default function ResumePreview({ data, allowTwoPages = false, onOverflowD
       return;
     }
 
-    const element = containerRef.current;
-    // Standard A4 container height target at 800px width
-    const SINGLE_PAGE_MAX_HEIGHT = 1060;
     const currentHeight = element.scrollHeight;
 
     if (currentHeight > SINGLE_PAGE_MAX_HEIGHT) {
-      if (fontScale > 0.95) {
-        // Apply gentle minor scaling (0.94) to fit slight overflows comfortably
-        setFontScale(0.94);
+      if (fontScale > 0.84) {
+        // Incrementally reduce font scale down to 0.84 to make content fit 1 page cleanly
+        setFontScale(prev => Math.max(0.84, parseFloat((prev - 0.04).toFixed(2))));
       } else {
-        // Content exceeds single page even with gentle font scale (0.94)
+        // Content exceeds single page even with minimum font scale (0.84)
         setIsOverflowing(true);
         if (onOverflowDetected) {
           onOverflowDetected(true);
@@ -91,9 +98,10 @@ export default function ResumePreview({ data, allowTwoPages = false, onOverflowD
       }
     } else {
       setIsOverflowing(false);
-      // If content fits comfortably at 1.0, maintain standard full-size fonts
-      if (currentHeight < 900 && fontScale < 1.0) {
-        setFontScale(1.0);
+      if (onOverflowDetected) onOverflowDetected(false);
+      // If content fits comfortably, gently raise font size up to 1.0
+      if (currentHeight < SINGLE_PAGE_MAX_HEIGHT - 180 && fontScale < 1.0) {
+        setFontScale(prev => Math.min(1.0, parseFloat((prev + 0.04).toFixed(2))));
       }
     }
   }, [data, fontScale, allowTwoPages, onOverflowDetected]);
@@ -302,23 +310,28 @@ export default function ResumePreview({ data, allowTwoPages = false, onOverflowD
         </div>
       )}
 
-      {/* Visual Page Break Line (Hidden automatically on PDF Export) */}
+      {/* Visual Page Break Line Overlay at Exact A4 Height (Hidden automatically on PDF Export) */}
       {(allowTwoPages || isOverflowing) && (
         <div 
           className="page-break-indicator"
           style={{
-            marginTop: '2rem',
-            marginBottom: '1rem',
-            padding: '0.6rem 0',
+            position: 'absolute',
+            top: `${page1Height}px`,
+            left: 0,
+            right: 0,
+            padding: '0.4rem 0',
             borderTop: '2px dashed #6366f1',
             borderBottom: '2px dashed #6366f1',
             textAlign: 'center',
-            fontSize: '9pt',
+            fontSize: '8.5pt',
             fontWeight: 700,
             color: '#4f46e5',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            background: 'rgba(99, 102, 241, 0.08)'
+            background: 'rgba(99, 102, 241, 0.12)',
+            boxShadow: '0 2px 10px rgba(99, 102, 241, 0.2)',
+            zIndex: 10,
+            pointerEvents: 'none'
           }}
         >
           📄 --- PAGE 1 ENDS HERE | PAGE 2 STARTS BELOW --- 📄

@@ -4,7 +4,7 @@ import {
   Sparkles, RefreshCw, BarChart2, ShieldCheck, FileCheck, ArrowRight, Eye, Target
 } from 'lucide-react';
 import JobTitleSelector from '../../components/JobTitleSelector';
-import { extractTextFromFile } from '../../utils/fileParsers';
+import { extractPlainTextFromFile } from '../../utils/fileParsers';
 import { analyzeResumeWithGemini } from '../../utils/geminiApi';
 
 export default function ATSTester() {
@@ -27,8 +27,8 @@ export default function ATSTester() {
     setReport(null);
 
     try {
-      const text = await extractTextFromFile(file);
-      if (!text || text.trim().length < 50) {
+      const text = await extractPlainTextFromFile(file);
+      if (!text || typeof text !== 'string' || text.trim().length < 50) {
         throw new Error('Extracted resume text is too short or empty. Please ensure file contains readable text.');
       }
       setExtractedText(text);

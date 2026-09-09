@@ -3,7 +3,7 @@ import {
   Search, Briefcase, MapPin, DollarSign, ExternalLink, 
   Upload, FileText, Sparkles, RefreshCw, Building, CheckCircle, Navigation
 } from 'lucide-react';
-import { extractTextFromFile } from '../../utils/fileParsers';
+import { extractPlainTextFromFile } from '../../utils/fileParsers';
 import { fetchMatchingJobs } from '../../utils/jobApi';
 
 export default function JobSuggestions({ builtResume }) {
@@ -42,7 +42,7 @@ export default function JobSuggestions({ builtResume }) {
     setLoading(true);
 
     try {
-      const text = await extractTextFromFile(file);
+      const text = await extractPlainTextFromFile(file);
       setResumeText(text);
 
       const lower = text.toLowerCase();

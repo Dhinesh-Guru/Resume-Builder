@@ -89,3 +89,30 @@ export async function extractTextFromFile(file) {
 
   throw new Error('Unsupported file format. Please upload a PDF, DOCX, TXT, or JSON file.');
 }
+
+/**
+ * Extracts guaranteed plain text string from PDF, DOCX, TXT, or JSON file.
+ * Safely converts structured JSON resume data into formatted text string if needed.
+ */
+export async function extractPlainTextFromFile(file) {
+  const result = await extractTextFromFile(file);
+
+  if (result.isJson && result.data) {
+    const d = result.data;
+    const lines = [
+      d.fullName ? d.fullName.toUpperCase() : '',
+      [d.email, d.phone, d.location, d.linkedin, d.github].filter(Boolean).join(' | '),
+      d.jobTitle ? `TARGET ROLE: ${d.jobTitle}` : '',
+      d.summary ? `\nSUMMARY:\n${d.summary}` : '',
+      (d.otherSkills || d.skills) ? `\nTECHNICAL SKILLS:\n${d.otherSkills || d.skills}` : '',
+      d.experiences?.length > 0 ? `\nWORK EXPERIENCE:\n` + d.experiences.map(e => `${e.jobTitle || ''} at ${e.company || ''} (${e.startDate || ''} - ${e.endDate || ''})\n${e.responsibilities || ''}`).join('\n') : '',
+      d.projects?.length > 0 ? `\nKEY PROJECTS:\n` + d.projects.map(p => `${p.title || ''} ${p.techStack ? `(${p.techStack})` : ''}\n${p.description || ''}`).join('\n') : '',
+      d.certifications?.length > 0 ? `\nCERTIFICATIONS:\n` + d.certifications.map(c => `${c.name || ''} - ${c.issuer || ''} ${c.year || ''}`).join('\n') : '',
+      d.educations?.length > 0 ? `\nEDUCATION:\n` + d.educations.map(ed => `${ed.degree || ''} ${ed.fieldOfStudy ? `in ${ed.fieldOfStudy}` : ''} ${ed.score ? `(${ed.score})` : ''} - ${ed.university || ''} (${ed.gradYear || ''})`).join('\n') : ''
+    ].filter(Boolean);
+
+    return lines.join('\n');
+  }
+
+  return result.text || '';
+}
