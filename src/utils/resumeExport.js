@@ -2,7 +2,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
 /**
- * Downloads standard ATS-friendly PDF of the element and embeds resume JSON metadata for instant re-importing
+ * Downloads standard ATS-friendly PDF of the element, embeds JSON metadata, and adds invisible searchable text streams
  */
 export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', allowTwoPages = false, resumeData = null) {
   const element = document.getElementById(elementId);
@@ -41,6 +41,7 @@ export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', 
     const imgWidth = canvas.width;
     const imgHeight = canvas.height;
 
+    // Render image
     if (!allowTwoPages) {
       // STRICT SINGLE PAGE MODE: Guaranteed to NEVER spill onto Page 2
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
@@ -65,6 +66,34 @@ export async function exportResumeToPdf(elementId, filename = 'ATS_Resume.pdf', 
         pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, position, pageRenderWidth, pageRenderHeight);
         heightLeft -= pdfHeight;
+      }
+    }
+
+    // Render invisible real text streams into PDF structure for 100% PDF text parsing & ATS searchability
+    if (resumeData) {
+      try {
+        pdf.setTextColor(255, 255, 255); // Invisible white text layer
+        pdf.setFontSize(1); // Micro 1pt size
+
+        const textLines = [
+          resumeData.fullName,
+          `${resumeData.email || ''} ${resumeData.phone || ''} ${resumeData.location || ''} ${resumeData.linkedin || ''} ${resumeData.github || ''}`,
+          `JOB TITLE: ${resumeData.jobTitle || ''}`,
+          `SUMMARY: ${resumeData.summary || ''}`,
+          `SKILLS: ${resumeData.otherSkills || ''}`,
+          ...(resumeData.experiences || []).map(e => `EXPERIENCE: ${e.jobTitle || ''} ${e.company || ''} ${e.startDate || ''} ${e.endDate || ''} ${e.responsibilities || ''}`),
+          ...(resumeData.projects || []).map(p => `PROJECT: ${p.title || ''} ${p.techStack || ''} ${p.description || ''}`),
+          ...(resumeData.certifications || []).map(c => `CERTIFICATION: ${c.name || ''} ${c.issuer || ''} ${c.year || ''}`),
+          ...(resumeData.educations || []).map(ed => `EDUCATION: ${ed.degree || ''} ${ed.fieldOfStudy || ''} ${ed.university || ''} ${ed.gradYear || ''} ${ed.score || ''}`)
+        ].filter(Boolean);
+
+        let tY = 5;
+        textLines.forEach(line => {
+          pdf.text(line.replace(/[\r\n]+/g, ' ').slice(0, 400), 5, tY);
+          tY += 2;
+        });
+      } catch (tErr) {
+        console.warn('Text layer render warning:', tErr);
       }
     }
 
@@ -160,6 +189,20 @@ export function exportResumeToTxt(resumeData, filename = 'ATS_Resume.txt') {
   }
 
   const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Downloads full resume data as a structured JSON backup (.json)
+ */
+export function exportResumeToJson(resumeData, filename = 'ATS_Resume_Backup.json') {
+  const jsonStr = JSON.stringify(resumeData, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { 
   User, Briefcase, GraduationCap, Award, FileDown, Plus, Trash2, 
   ArrowRight, ArrowLeft, CheckCircle, Sparkles, AlertCircle, UserCheck, FolderGit2,
-  Layers, Upload, FileText
+  Layers, Upload, FileText, RotateCcw, Download
 } from 'lucide-react';
 import JobTitleSelector from '../../components/JobTitleSelector';
 import ResumePreview from './ResumePreview';
 import { JOB_SPECIFIC_QUESTIONS, DEFAULT_EXTRA_QUESTIONS } from './questions';
-import { exportResumeToPdf, exportResumeToTxt } from '../../utils/resumeExport';
+import { exportResumeToPdf, exportResumeToTxt, exportResumeToJson } from '../../utils/resumeExport';
 import { extractTextFromFile } from '../../utils/fileParsers';
 import { parseResumeTextToFormData } from '../../utils/resumeParser';
 
@@ -27,6 +27,9 @@ export default function ResumeBuilder({ onResumeCreated }) {
   // Upload & Parsing State
   const [uploadingResume, setUploadingResume] = useState(false);
   const [uploadSuccessMsg, setUploadSuccessMsg] = useState('');
+
+  // Check if browser has saved resume data in localStorage
+  const hasSavedLocalData = !!localStorage.getItem('built_resume_data');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -57,7 +60,39 @@ export default function ResumeBuilder({ onResumeCreated }) {
   const [errors, setErrors] = useState({});
   const [downloading, setDownloading] = useState(false);
 
-  // Upload and Auto-Fill Existing Resume File (PDF / DOCX / TXT)
+  // Restore Last Created Resume from localStorage
+  const handleRestoreSavedResume = () => {
+    const rawSaved = localStorage.getItem('built_resume_data');
+    if (!rawSaved) {
+      alert('No saved resume found in your browser storage.');
+      return;
+    }
+    try {
+      const saved = JSON.parse(rawSaved);
+      setFormData(prev => ({
+        ...prev,
+        ...saved,
+        projects: saved.projects?.length > 0 ? saved.projects : prev.projects,
+        experiences: saved.experiences?.length > 0 ? saved.experiences : prev.experiences,
+        certifications: saved.certifications?.length > 0 ? saved.certifications : prev.certifications,
+        educations: saved.educations?.length > 0 ? saved.educations : prev.educations
+      }));
+
+      if (saved.jobTitle) {
+        setJobTitle(saved.jobTitle);
+      }
+      if (saved.experienceStatus) {
+        setExperienceStatus(saved.experienceStatus);
+      }
+
+      setUploadSuccessMsg('⚡ Restored your last saved resume details successfully!');
+      setStep(2);
+    } catch (e) {
+      alert('Could not restore saved data: ' + e.message);
+    }
+  };
+
+  // Upload and Auto-Fill Existing Resume File (PDF / DOCX / TXT / JSON)
   const handleResumeFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -301,6 +336,11 @@ export default function ResumeBuilder({ onResumeCreated }) {
     exportResumeToTxt({ ...formData, experiences: finalExperiences, jobTitle }, `${formData.fullName.replace(/\s+/g, '_')}_Resume.txt`);
   };
 
+  const handleJsonDownload = () => {
+    const finalExperiences = experienceStatus === 'fresher' ? [] : formData.experiences;
+    exportResumeToJson({ ...formData, experiences: finalExperiences, jobTitle }, `${formData.fullName.replace(/\s+/g, '_')}_Resume_Backup.json`);
+  };
+
   const extraQuestions = JOB_SPECIFIC_QUESTIONS[jobRoleId] || DEFAULT_EXTRA_QUESTIONS;
 
   return (
@@ -341,7 +381,7 @@ export default function ResumeBuilder({ onResumeCreated }) {
       {/* STEP 1: Select Job Title or Upload Existing Resume */}
       {step === 1 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {/* Upload Existing Resume Box */}
+          {/* Upload / Restore Existing Resume Box */}
           <div className="glass-card" style={{
             background: 'rgba(99, 102, 241, 0.08)',
             border: '2px dashed var(--accent-primary)',
@@ -350,21 +390,33 @@ export default function ResumeBuilder({ onResumeCreated }) {
             textAlign: 'center'
           }}>
             <h3 style={{ fontSize: '1.25rem', color: 'var(--accent-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-              <Upload size={24} /> Edit an Existing Resume (PDF / DOCX / TXT)
+              <Upload size={24} /> Edit an Existing Resume (PDF / DOCX / TXT / JSON)
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '650px', margin: '0 auto 1.25rem auto' }}>
               Upload your existing resume file to automatically extract your contact details, experience, projects, education, and skills!
             </p>
-            <label className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', padding: '0.75rem 1.5rem', fontSize: '1rem', cursor: 'pointer' }}>
-              <FileText size={20} /> {uploadingResume ? 'Parsing Resume Details...' : 'Upload & Edit Existing Resume File'}
-              <input 
-                type="file" 
-                accept=".pdf,.docx,.txt" 
-                onChange={handleResumeFileUpload} 
-                disabled={uploadingResume}
-                style={{ display: 'none' }} 
-              />
-            </label>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <label className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', padding: '0.75rem 1.5rem', fontSize: '1rem', cursor: 'pointer' }}>
+                <FileText size={20} /> {uploadingResume ? 'Parsing Resume Details...' : 'Upload & Edit Resume File'}
+                <input 
+                  type="file" 
+                  accept=".pdf,.docx,.txt,.json" 
+                  onChange={handleResumeFileUpload} 
+                  disabled={uploadingResume}
+                  style={{ display: 'none' }} 
+                />
+              </label>
+
+              {hasSavedLocalData && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={handleRestoreSavedResume}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', padding: '0.75rem 1.5rem', fontSize: '1rem' }}
+                >
+                  <RotateCcw size={18} /> Restore Last Created Resume
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="glass-card">
@@ -388,15 +440,20 @@ export default function ResumeBuilder({ onResumeCreated }) {
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <label className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
-                  <Upload size={14} /> Import Different Resume PDF
+                  <Upload size={14} /> Import Resume File
                   <input 
                     type="file" 
-                    accept=".pdf,.docx,.txt" 
+                    accept=".pdf,.docx,.txt,.json" 
                     onChange={handleResumeFileUpload} 
                     disabled={uploadingResume}
                     style={{ display: 'none' }} 
                   />
                 </label>
+                {hasSavedLocalData && (
+                  <button className="btn btn-secondary btn-sm" onClick={handleRestoreSavedResume}>
+                    <RotateCcw size={14} /> Restore Saved Data
+                  </button>
+                )}
                 <button className="btn btn-secondary btn-sm" onClick={() => setStep(1)}>
                   Change Job Title
                 </button>
@@ -1014,6 +1071,9 @@ export default function ResumeBuilder({ onResumeCreated }) {
                 title="Toggle between single page auto-fit and 2-page layout"
               >
                 <Layers size={16} /> {allowTwoPages ? 'Page Layout: 2 Pages' : 'Page Layout: 1 Page (Auto-Fit)'}
+              </button>
+              <button className="btn btn-secondary" onClick={handleJsonDownload} title="Download structured JSON backup to restore details anytime">
+                <Download size={16} /> Save Backup (.JSON)
               </button>
               <button className="btn btn-secondary" onClick={handleTxtDownload}>
                 <FileDown size={16} /> Download .TXT (ATS Raw)

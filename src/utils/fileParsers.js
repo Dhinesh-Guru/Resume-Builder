@@ -5,7 +5,7 @@ import mammoth from 'mammoth';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 /**
- * Parses uploaded PDF, DOCX, or TXT file and extracts readable plain text or embedded JSON metadata.
+ * Parses uploaded PDF, DOCX, TXT, or JSON file and extracts readable plain text or embedded JSON metadata.
  * Returns { isJson: boolean, text?: string, data?: object }
  */
 export async function extractTextFromFile(file) {
@@ -13,10 +13,19 @@ export async function extractTextFromFile(file) {
 
   const fileName = file.name.toLowerCase();
 
+  // JSON Backup Files
+  if (fileName.endsWith('.json')) {
+    const content = await file.text();
+    try {
+      return { isJson: true, data: JSON.parse(content) };
+    } catch (e) {
+      throw new Error('Invalid JSON backup file format.');
+    }
+  }
+
   // TXT Files
   if (fileName.endsWith('.txt')) {
     const content = await file.text();
-    // Check if it's a JSON file saved as txt
     if (content.trim().startsWith('{') && content.trim().endsWith('}')) {
       try {
         return { isJson: true, data: JSON.parse(content) };
@@ -66,11 +75,17 @@ export async function extractTextFromFile(file) {
     }
 
     if (!fullText.trim()) {
-      throw new Error('This PDF file contains scanned image data without readable text. Please upload a text-based PDF, DOCX, or TXT file.');
+      // Check if browser has localStorage saved data to suggest restoring
+      const hasSavedLocalStorage = !!localStorage.getItem('built_resume_data');
+      if (hasSavedLocalStorage) {
+        throw new Error('This PDF file was created prior to text embedding. Click "⚡ Restore Last Created Resume" below to load your saved resume instantly!');
+      } else {
+        throw new Error('This PDF file contains scanned image data without readable text. Please upload a text-based PDF, DOCX, TXT, or JSON backup file.');
+      }
     }
 
     return { isJson: false, text: fullText };
   }
 
-  throw new Error('Unsupported file format. Please upload a PDF, DOCX, or TXT file.');
+  throw new Error('Unsupported file format. Please upload a PDF, DOCX, TXT, or JSON file.');
 }
