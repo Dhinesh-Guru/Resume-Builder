@@ -89,33 +89,24 @@ export function exportNativeVectorPdf(resumeData, filename = 'ATS_Resume.pdf', a
 
   const totalUnits = (summaryLen / 100) + (expCount * 2) + (expBullets * 1.2) + (projCount * 2) + (projBullets * 1.2) + (eduCount * 1.8) + (certCount * 1.2) + (skillCount * 1.2);
 
-  // Dynamic layout proportions based on content volume
-  let baseFs = 10;
-  let lineH = 5.0;
-  let headerFs = 11;
-  let nameFs = 18;
-  let titleFs = 11;
-  let sectionGap = 5.5;
-  let itemGap = 3.5;
+  // Dynamic layout proportions tailored to fill ~92-95% of single A4 page height
+  let baseFs = 10.5;
+  let lineH = 5.6;
+  let headerFs = 11.5;
+  let nameFs = 19;
+  let titleFs = 11.5;
+  let sectionGap = 7.5;
+  let itemGap = 4.8;
 
-  if (totalUnits > 28) {
-    // Dense content: Compact font & line spacing to fit 1 page
-    baseFs = 9;
-    lineH = 4.3;
-    headerFs = 10;
-    nameFs = 16;
-    titleFs = 10;
-    sectionGap = 4.0;
-    itemGap = 2.5;
-  } else if (totalUnits < 16) {
-    // Light content: Generous font & line spacing to fill page comfortably
-    baseFs = 10.5;
-    lineH = 5.4;
-    headerFs = 11.5;
-    nameFs = 19;
-    titleFs = 11.5;
-    sectionGap = 6.5;
-    itemGap = 4.5;
+  if (totalUnits > 35) {
+    // Multi-page or very dense content: Compact font & line spacing
+    baseFs = 9.2;
+    lineH = 4.4;
+    headerFs = 10.5;
+    nameFs = 16.5;
+    titleFs = 10.5;
+    sectionGap = 4.5;
+    itemGap = 3.0;
   }
 
   let y = 15;
